@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Git Workflow
+- Default branch: `main` (for all repos in this project)
+
 # Core Development Philosophy
 
 ## KISS (Keep It Simple, Stupid)
