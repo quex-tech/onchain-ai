@@ -1,0 +1,27 @@
+# Compiler files
+cache/
+out/
+
+# Ignores development broadcast logs
+**/broadcast
+
+# Docs
+docs/
+
+# Dotenv file
+.env
+
+# Config with secrets
+config.yaml
+
+# IDE files
+.idea
+.vscode
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
