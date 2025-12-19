@@ -8,5 +8,11 @@
     "Bash(npm:*)",
     "Bash(python:*)",
     "Bash(pytest:*)"
+  ],
+  "allowedUrls": [
+    "github.com",
+    "*.github.com",
+    "quex.tech",
+    "*.quex.tech"
   ]
 }
