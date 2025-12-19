@@ -1,0 +1,12 @@
+{
+  "allowedTools": [
+    "Edit",
+    "Read",
+    "Write",
+    "Bash(git add:*)",
+    "Bash(git commit:*)",
+    "Bash(npm:*)",
+    "Bash(python:*)",
+    "Bash(pytest:*)"
+  ]
+}
