@@ -8,49 +8,54 @@ import {
   useReadContract,
   useWriteContract,
   useWatchContractEvent,
+  useSwitchChain,
+  useChainId,
 } from "wagmi";
-import { parseEther, formatEther } from "viem";
+import { parseEther } from "viem";
 import { chatOracleAbi } from "@/lib/abi";
-import { CHAT_ORACLE_ADDRESS, zgChain } from "@/lib/config";
+import { CONTRACT_ADDRESSES, zgMainnet, zgTestnet } from "@/lib/config";
 
 type Message = {
   id: number;
   role: "user" | "assistant";
   content: string;
-  pending?: boolean;
 };
 
 export default function Home() {
+  const chainId = useChainId();
   const { address, isConnected } = useAccount();
   const { connect, connectors } = useConnect();
   const { disconnect } = useDisconnect();
+  const { switchChain } = useSwitchChain();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [depositAmount, setDepositAmount] = useState("0.01");
 
+  const contractAddress = CONTRACT_ADDRESSES[chainId];
+  const currentChain = chainId === zgMainnet.id ? zgMainnet : zgTestnet;
+
   const { data: subscriptionId } = useReadContract({
-    address: CHAT_ORACLE_ADDRESS,
+    address: contractAddress,
     abi: chatOracleAbi,
     functionName: "getUserSubscription",
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    query: { enabled: !!address && !!contractAddress },
   });
 
   const { data: conversation, refetch: refetchConversation } = useReadContract({
-    address: CHAT_ORACLE_ADDRESS,
+    address: contractAddress,
     abi: chatOracleAbi,
     functionName: "getConversation",
     args: address ? [address] : undefined,
-    query: { enabled: !!address },
+    query: { enabled: !!address && !!contractAddress },
   });
 
   const { writeContract, isPending } = useWriteContract();
 
   const hasSubscription = subscriptionId && subscriptionId > 0n;
 
-  // Watch for ResponseReceived events
   useWatchContractEvent({
-    address: CHAT_ORACLE_ADDRESS,
+    address: contractAddress,
     abi: chatOracleAbi,
     eventName: "ResponseReceived",
     onLogs: () => {
@@ -58,7 +63,6 @@ export default function Home() {
     },
   });
 
-  // Sync conversation from contract
   useEffect(() => {
     if (conversation) {
       const msgs: Message[] = [];
@@ -73,18 +77,18 @@ export default function Home() {
   }, [conversation]);
 
   const handleSend = () => {
-    if (!input.trim() || !address) return;
+    if (!input.trim() || !address || !contractAddress) return;
 
     const value = hasSubscription ? 0n : parseEther(depositAmount);
 
     writeContract(
       {
-        address: CHAT_ORACLE_ADDRESS,
+        address: contractAddress,
         abi: chatOracleAbi,
         functionName: "sendMessage",
         args: [input],
         value,
-        chain: zgChain,
+        chain: currentChain,
         account: address,
       },
       {
@@ -114,8 +118,16 @@ export default function Home() {
       <header className="p-4 border-b border-gray-700 flex justify-between items-center">
         <h1 className="text-xl font-bold">On-Chain AI Chat</h1>
         <div className="flex items-center gap-4">
+          <select
+            value={chainId}
+            onChange={(e) => switchChain({ chainId: Number(e.target.value) })}
+            className="px-2 py-1 bg-gray-800 rounded text-sm"
+          >
+            <option value={zgTestnet.id}>{zgTestnet.name}</option>
+            <option value={zgMainnet.id}>{zgMainnet.name}</option>
+          </select>
           <span className="text-sm text-gray-400">
-            {hasSubscription ? "Subscription active" : "No subscription"}
+            {hasSubscription ? "Active" : "No sub"}
           </span>
           <span className="text-sm text-gray-400">
             {address?.slice(0, 6)}...{address?.slice(-4)}
@@ -146,7 +158,6 @@ export default function Home() {
               }`}
             >
               {msg.content}
-              {msg.pending && <span className="ml-2 text-gray-400">...</span>}
             </div>
           </div>
         ))}
