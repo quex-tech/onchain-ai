@@ -1,0 +1,9 @@
+[submodule "lib/forge-std"]
+	path = lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "lib/quex-v1-interfaces"]
+	path = lib/quex-v1-interfaces
+	url = https://github.com/quex-tech/quex-v1-interfaces
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts

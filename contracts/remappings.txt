@@ -1,0 +1,4 @@
+quex-v1-interfaces/=lib/quex-v1-interfaces/
+src/=lib/quex-v1-interfaces/src/
+@openzeppelin/=lib/openzeppelin-contracts/
+forge-std/=lib/forge-std/src/
