@@ -19,9 +19,6 @@ Avoid building functionality on speculation. Implement features only when they a
 ## DRY (Don't repeat yourself)
 Every piece of knowledge must have a single, unambiguous, authoritative representation within a system
 
-## TDD (Test-Driven Development)
-Write tests first, then code to pass them. Red → Green → Refactor.
-
 ## Small Steps & Frequent Commits
 - Implement the minimal possible piece of logic at a time
 - Commit working code immediately after tests pass
@@ -55,6 +52,56 @@ Prefer clean, pure functions where possible:
 
 ## DOCUMENTATION
 - Quex documentation is available at https://docs.quex.tech/ (sources at https://github.com/quex-tech/developer-docs) 
+
+## TDD Workflow
+
+### Agents
+
+Three agents handle the red-green-refactor cycle:
+
+- `@test-writer` - RED: writes failing tests from requirements
+- `@implementer` - GREEN: writes minimal code to pass tests
+- `@refactorer` - REFACTOR: improves code while tests stay green
+
+### Workflow
+
+For each feature or change:
+
+```
+1. RED:    @test-writer "<requirement>"
+           → Must produce failing test before proceeding
+
+2. GREEN:  @implementer
+           → Must make test pass with minimal code
+
+3. REFACTOR: @refactorer (optional but recommended)
+           → Improve structure, tests must stay green
+
+4. REPEAT from step 1 for next requirement
+```
+
+### Rules
+
+- Never skip RED phase
+- Never write implementation before failing test exists
+- Never modify tests to make them pass
+- Write minimal implementation that pass tests
+- Each agent operates in isolation - no context sharing
+- If GREEN fails repeatedly, return to RED to refine test
+
+## Commands
+
+- `/tdd <feature>` - Start full TDD cycle
+- `/red <requirement>` - Write failing test only
+- `/green` - Implement to pass current failing test
+- `/refactor` - Improve current implementation
+
+## Quality gates
+
+Before any commit:
+- All tests pass
+- No skipped tests
+- Coverage maintained or improved
 
 ## Project Overview
 
