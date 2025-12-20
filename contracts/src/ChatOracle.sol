@@ -142,7 +142,7 @@ contract ChatOracle is Ownable {
         flowId = config.build();
     }
 
-    function _buildRequestBody(string calldata prompt) private view returns (bytes memory) {
+    function _buildRequestBody(string calldata prompt) private pure returns (bytes memory) {
         return abi.encodePacked(
             '{"model":"',
             MODEL,
