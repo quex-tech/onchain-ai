@@ -18,12 +18,15 @@ import { buildOpenAIBody, getExplorerUrl } from "@/lib/utils";
 import { createDebugLogger } from "@/lib/debug";
 import {
   buildMessagesFromConversation,
-  formatTxHashShort,
   formatBalance,
   hasActiveSubscription,
   type PendingMessage,
   type TxHashMap,
 } from "@/lib/messages";
+import { Header } from "@/components/Header";
+import { DebugPanel } from "@/components/DebugPanel";
+import { ChatMessage } from "@/components/ChatMessage";
+import { ChatInput } from "@/components/ChatInput";
 
 // Store tx hashes for messages (messageId -> txHash)
 const messageTxHashes: TxHashMap = new Map();
@@ -62,7 +65,6 @@ export default function Home() {
 
     const fetchEvents = async () => {
       try {
-        // Fetch MessageSent events
         const messageLogs = await publicClient.getLogs({
           address: contractAddress,
           event: {
@@ -85,7 +87,6 @@ export default function Home() {
         });
         debug("Fetched historical message events", { count: messageLogs.length });
 
-        // Fetch ResponseReceived events
         const responseLogs = await publicClient.getLogs({
           address: contractAddress,
           event: {
@@ -107,7 +108,6 @@ export default function Home() {
         });
         debug("Fetched historical response events", { count: responseLogs.length });
 
-        // Trigger re-render after Maps are updated
         setTxHashesVersion((n) => n + 1);
       } catch (error) {
         debug("Error fetching historical events", error);
@@ -160,7 +160,6 @@ export default function Home() {
         const messageId = (log as { args?: { messageId?: bigint } }).args?.messageId;
         if (messageId !== undefined && log.transactionHash) {
           responseTxHashes.set(messageId.toString(), log.transactionHash);
-          debug("Stored response tx", { messageId: messageId.toString(), txHash: log.transactionHash });
         }
       });
       setTxHashesVersion((n) => n + 1);
@@ -179,7 +178,6 @@ export default function Home() {
         const messageId = (log as { args?: { messageId?: bigint } }).args?.messageId;
         if (messageId !== undefined && log.transactionHash) {
           messageTxHashes.set(messageId.toString(), log.transactionHash);
-          debug("Stored message tx", { messageId: messageId.toString(), txHash: log.transactionHash });
         }
       });
       setTxHashesVersion((n) => n + 1);
@@ -202,13 +200,11 @@ export default function Home() {
   useEffect(() => {
     if (writeError) {
       debug("Write error", writeError);
-      // Extract meaningful error message
       let errorDetails = (writeError as { shortMessage?: string; reason?: string }).shortMessage
         || (writeError as { reason?: string }).reason
         || writeError.message
         || "Transaction failed";
 
-      // Check for RPC-related errors and provide helpful guidance
       if (errorDetails.includes("Internal JSON-RPC error")) {
         errorDetails = "RPC connection issue. Try: 1) Switch RPC in MetaMask (Settings > Networks > Arbitrum Sepolia), 2) Use RPC: https://sepolia-rollup.arbitrum.io/rpc";
       }
@@ -229,7 +225,6 @@ export default function Home() {
       setPendingMessage(updated);
       refetchConversation();
       refetchSubscription();
-      // Clear pending message after a delay to let conversation update
       setTimeout(() => {
         debug("Clearing pending message after confirmation");
         pendingMessageRef.current = null;
@@ -268,9 +263,8 @@ export default function Home() {
     const messageContent = input;
 
     debug("Sending message", { prompt: messageContent, value: value.toString(), hasSubscription });
-    setErrorMessage(null); // Clear any previous error
+    setErrorMessage(null);
 
-    // Create pending message
     const pending: PendingMessage = {
       id: Date.now(),
       content: messageContent,
@@ -287,7 +281,7 @@ export default function Home() {
         functionName: "sendMessage",
         args: [messageContent, body],
         value,
-        gas: 2_000_000n, // Quex oracle requests need ~1.4M gas
+        gas: 2_000_000n,
       },
       {
         onSuccess: (hash) => {
@@ -302,6 +296,11 @@ export default function Home() {
     );
   }, [input, address, contractAddress, hasSubscription, depositAmount, writeContract]);
 
+  const handleCopyLogs = useCallback(() => {
+    navigator.clipboard.writeText(debugLogger.getLogs().join("\n"));
+    alert("Logs copied to clipboard!");
+  }, []);
+
   if (!isConnected) {
     return (
       <main className="min-h-screen flex flex-col items-center justify-center bg-gray-900 gap-6">
@@ -314,49 +313,20 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-gray-900 text-white flex flex-col">
-      <header className="p-4 border-b border-gray-700 flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold">On-Chain AI Chat</h1>
-          <button
-            onClick={() => setShowDebug(!showDebug)}
-            className="text-xs px-2 py-1 bg-gray-800 rounded hover:bg-gray-700"
-          >
-            {showDebug ? "Hide Debug" : "Debug"}
-          </button>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-400">
-            {hasSubscription
-              ? `Balance: ${subscriptionBalance ? formatBalance(subscriptionBalance) : "..."} ${currentChain.nativeCurrency.symbol}`
-              : "No subscription"}
-          </span>
-          <ConnectButton />
-        </div>
-      </header>
+      <Header
+        hasSubscription={hasSubscription}
+        subscriptionBalance={subscriptionBalance ? formatBalance(subscriptionBalance) : undefined}
+        currencySymbol={currentChain.nativeCurrency.symbol}
+        onDebugToggle={() => setShowDebug(!showDebug)}
+        showDebug={showDebug}
+        walletButton={<ConnectButton />}
+      />
 
       {showDebug && (
-        <div className="bg-black border-b border-gray-700 p-2 max-h-48 overflow-y-auto font-mono text-xs">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-green-400">Debug Logs (copy and share with AI)</span>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(debugLogger.getLogs().join("\n"));
-                alert("Logs copied to clipboard!");
-              }}
-              className="px-2 py-1 bg-gray-800 rounded hover:bg-gray-700"
-            >
-              Copy All
-            </button>
-          </div>
-          {debugLogger.getLogs().map((log, i) => (
-            <div key={i} className="text-gray-300 whitespace-pre-wrap break-all">
-              {log}
-            </div>
-          ))}
-          {debugLogger.getLogs().length === 0 && (
-            <div className="text-gray-500">No logs yet... (v{debugVersion})</div>
-          )}
-        </div>
+        <DebugPanel
+          logs={debugLogger.getLogs()}
+          onCopy={handleCopyLogs}
+        />
       )}
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -366,41 +336,15 @@ export default function Home() {
           </div>
         )}
         {messages.map((msg) => (
-          <div
+          <ChatMessage
             key={msg.id}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div className={`flex flex-col gap-1 max-w-[70%] ${msg.role === "user" ? "items-end" : "items-start"}`}>
-              <div
-                className={`p-3 rounded-lg ${
-                  msg.role === "user" ? "bg-blue-600" : "bg-gray-700"
-                } ${msg.status === "pending" ? "opacity-70" : ""}`}
-              >
-                {msg.content}
-              </div>
-              <div className="flex items-center gap-2 text-xs text-gray-500">
-                {msg.status === "pending" && (
-                  <span className="animate-pulse text-yellow-400">Waiting for wallet...</span>
-                )}
-                {msg.status === "confirming" && (
-                  <span className="animate-pulse text-blue-400">Confirming on chain...</span>
-                )}
-                {msg.status === "failed" && (
-                  <span className="text-red-400">Failed</span>
-                )}
-                {msg.txHash && (
-                  <a
-                    href={getExplorerUrl(chainId, msg.txHash)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-blue-400 underline"
-                  >
-                    tx:{formatTxHashShort(msg.txHash)}
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
+            id={String(msg.id)}
+            role={msg.role}
+            content={msg.content}
+            status={msg.status}
+            txHash={msg.txHash}
+            explorerUrl={msg.txHash ? getExplorerUrl(chainId, msg.txHash) : undefined}
+          />
         ))}
         {isConfirming && (
           <div className="text-center text-gray-500 text-sm">
@@ -439,24 +383,12 @@ export default function Home() {
             </div>
           </div>
         )}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !isPending && handleSend()}
-            placeholder="Type your message..."
-            className="flex-1 px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            disabled={isPending}
-          />
-          <button
-            onClick={handleSend}
-            disabled={isPending}
-            className="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isPending ? "Sending..." : "Send"}
-          </button>
-        </div>
+        <ChatInput
+          value={input}
+          onChange={setInput}
+          onSend={handleSend}
+          isPending={isPending}
+        />
       </div>
     </main>
   );
