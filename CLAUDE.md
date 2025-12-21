@@ -36,6 +36,11 @@ When multiple Claude instances work in parallel:
 git checkout main && git merge worktree-a
 ```
 
+### Dev Server
+- Only Instance A runs the dev server (to save memory)
+- Instance A: port 3000 (`npm run dev` from worktree-a)
+- Other instances: no dev server, changes tested via Instance A after merging to main
+
 # Core Development Philosophy
 
 ## KISS (Keep It Simple, Stupid)

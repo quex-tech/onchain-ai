@@ -109,11 +109,15 @@ export default function Home() {
         });
         responseLogs.forEach((log) => {
           const messageId = log.args.messageId?.toString();
+          debug("ResponseReceived log", { messageId, txHash: log.transactionHash });
           if (messageId && log.transactionHash) {
             responseTxHashes.set(messageId, log.transactionHash);
           }
         });
-        debug("Fetched historical response events", { count: responseLogs.length });
+        debug("Fetched historical response events", {
+          count: responseLogs.length,
+          responseTxHashes: Array.from(responseTxHashes.entries())
+        });
 
         setTxHashesVersion((n) => n + 1);
       } catch (error) {
@@ -273,7 +277,8 @@ export default function Home() {
     }
 
     const value = hasSubscription ? 0n : parseEther(depositAmount);
-    const body = buildOpenAIBody(input);
+    const confirmedMessages = messages.filter(m => m.status === "confirmed");
+    const body = buildOpenAIBody(input, { history: confirmedMessages });
     const messageContent = input;
 
     debug("Sending message", { prompt: messageContent, value: value.toString(), hasSubscription });
