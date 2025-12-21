@@ -42,6 +42,7 @@ export default function Home() {
   const [pendingMessage, setPendingMessage] = useState<PendingMessage | null>(null);
   const pendingMessageRef = useRef<PendingMessage | null>(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [debugVersion, setDebugVersion] = useState(0);
   const [txHashesVersion, setTxHashesVersion] = useState(0);
 
@@ -201,6 +202,12 @@ export default function Home() {
   useEffect(() => {
     if (writeError) {
       debug("Write error", writeError);
+      // Extract meaningful error message
+      const errorDetails = (writeError as { shortMessage?: string; reason?: string }).shortMessage
+        || (writeError as { reason?: string }).reason
+        || writeError.message
+        || "Transaction failed";
+      setErrorMessage(errorDetails);
       pendingMessageRef.current = null;
       setPendingMessage(null);
       resetWrite();
@@ -255,6 +262,7 @@ export default function Home() {
     const messageContent = input;
 
     debug("Sending message", { prompt: messageContent, value: value.toString(), hasSubscription });
+    setErrorMessage(null); // Clear any previous error
 
     // Create pending message
     const pending: PendingMessage = {
@@ -396,6 +404,19 @@ export default function Home() {
       </div>
 
       <div className="p-4 border-t border-gray-700">
+        {errorMessage && (
+          <div className="mb-3 p-3 bg-red-900/50 rounded-lg text-sm text-red-200">
+            <div className="flex justify-between items-start">
+              <span>{errorMessage}</span>
+              <button
+                onClick={() => setErrorMessage(null)}
+                className="text-red-400 hover:text-red-300 ml-2"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
         {!hasSubscription && (
           <div className="mb-3 p-3 bg-yellow-900/50 rounded-lg text-sm">
             First message requires a deposit to create subscription.
