@@ -7,6 +7,7 @@ import {
   type ConversationItem,
   type PendingMessage,
   type TxHashMap,
+  type PromptToMessageIdMap,
 } from "./messages";
 
 describe("formatTxHashShort", () => {
@@ -50,9 +51,10 @@ describe("hasActiveSubscription", () => {
 
 describe("buildMessagesFromConversation", () => {
   const emptyTxMap: TxHashMap = new Map();
+  const emptyPromptMap: PromptToMessageIdMap = new Map();
 
   it("returns empty array for empty conversation", () => {
-    const result = buildMessagesFromConversation([], null, emptyTxMap, emptyTxMap);
+    const result = buildMessagesFromConversation([], null, emptyTxMap, emptyTxMap, emptyPromptMap);
     expect(result).toEqual([]);
   });
 
@@ -60,7 +62,8 @@ describe("buildMessagesFromConversation", () => {
     const conversation: ConversationItem[] = [
       { prompt: "Hello", response: "" },
     ];
-    const result = buildMessagesFromConversation(conversation, null, emptyTxMap, emptyTxMap);
+    const promptMap: PromptToMessageIdMap = new Map([["Hello", "1"]]);
+    const result = buildMessagesFromConversation(conversation, null, emptyTxMap, emptyTxMap, promptMap);
 
     expect(result).toHaveLength(1);
     expect(result[0].role).toBe("user");
@@ -73,7 +76,7 @@ describe("buildMessagesFromConversation", () => {
     const conversation: ConversationItem[] = [
       { prompt: "Hello", response: "Hi there!" },
     ];
-    const result = buildMessagesFromConversation(conversation, null, emptyTxMap, emptyTxMap);
+    const result = buildMessagesFromConversation(conversation, null, emptyTxMap, emptyTxMap, emptyPromptMap);
 
     expect(result).toHaveLength(2);
     expect(result[0].role).toBe("user");
@@ -88,8 +91,9 @@ describe("buildMessagesFromConversation", () => {
     ];
     const messageTxMap: TxHashMap = new Map([["1", "0xabc123"]]);
     const responseTxMap: TxHashMap = new Map([["1", "0xdef456"]]);
+    const promptMap: PromptToMessageIdMap = new Map([["Hello", "1"]]);
 
-    const result = buildMessagesFromConversation(conversation, null, messageTxMap, responseTxMap);
+    const result = buildMessagesFromConversation(conversation, null, messageTxMap, responseTxMap, promptMap);
 
     expect(result[0].txHash).toBe("0xabc123");
     expect(result[1].txHash).toBe("0xdef456");
@@ -103,7 +107,7 @@ describe("buildMessagesFromConversation", () => {
       status: "pending",
     };
 
-    const result = buildMessagesFromConversation(conversation, pending, emptyTxMap, emptyTxMap);
+    const result = buildMessagesFromConversation(conversation, pending, emptyTxMap, emptyTxMap, emptyPromptMap);
 
     expect(result).toHaveLength(1);
     expect(result[0].role).toBe("user");
@@ -121,7 +125,7 @@ describe("buildMessagesFromConversation", () => {
       status: "confirming",
     };
 
-    const result = buildMessagesFromConversation(conversation, pending, emptyTxMap, emptyTxMap);
+    const result = buildMessagesFromConversation(conversation, pending, emptyTxMap, emptyTxMap, emptyPromptMap);
 
     expect(result).toHaveLength(1);
     expect(result[0].content).toBe("New message");
@@ -134,7 +138,7 @@ describe("buildMessagesFromConversation", () => {
       { prompt: "Third", response: "" },
     ];
 
-    const result = buildMessagesFromConversation(conversation, null, emptyTxMap, emptyTxMap);
+    const result = buildMessagesFromConversation(conversation, null, emptyTxMap, emptyTxMap, emptyPromptMap);
 
     expect(result).toHaveLength(5); // 3 user + 2 assistant (third has no response)
     expect(result[0].content).toBe("First");

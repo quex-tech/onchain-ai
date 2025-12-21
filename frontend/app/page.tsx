@@ -22,6 +22,7 @@ import {
   hasActiveSubscription,
   type PendingMessage,
   type TxHashMap,
+  type PromptToMessageIdMap,
 } from "@/lib/messages";
 import { Header } from "@/components/Header";
 import { DebugPanel } from "@/components/DebugPanel";
@@ -31,6 +32,8 @@ import { ChatInput } from "@/components/ChatInput";
 // Store tx hashes for messages (messageId -> txHash)
 const messageTxHashes: TxHashMap = new Map();
 const responseTxHashes: TxHashMap = new Map();
+// Store prompt -> messageId mapping (to look up correct messageId for each prompt)
+const promptToMessageId: PromptToMessageIdMap = new Map();
 
 // Debug logger instance
 const debugLogger = createDebugLogger({ maxLogs: 50 });
@@ -81,8 +84,12 @@ export default function Home() {
         });
         messageLogs.forEach((log) => {
           const messageId = log.args.messageId?.toString();
+          const prompt = log.args.prompt;
           if (messageId && log.transactionHash) {
             messageTxHashes.set(messageId, log.transactionHash);
+            if (prompt) {
+              promptToMessageId.set(prompt, messageId);
+            }
           }
         });
         debug("Fetched historical message events", { count: messageLogs.length });
@@ -175,9 +182,14 @@ export default function Home() {
     onLogs: (logs) => {
       debug("MessageSent event", logs);
       logs.forEach((log) => {
-        const messageId = (log as { args?: { messageId?: bigint } }).args?.messageId;
+        const args = (log as { args?: { messageId?: bigint; prompt?: string } }).args;
+        const messageId = args?.messageId;
+        const prompt = args?.prompt;
         if (messageId !== undefined && log.transactionHash) {
           messageTxHashes.set(messageId.toString(), log.transactionHash);
+          if (prompt) {
+            promptToMessageId.set(prompt, messageId.toString());
+          }
         }
       });
       setTxHashesVersion((n) => n + 1);
@@ -249,7 +261,9 @@ export default function Home() {
     conversation ?? [],
     pendingMessage,
     messageTxHashes,
-    responseTxHashes
+    responseTxHashes,
+    promptToMessageId,
+    debug
   );
 
   const handleSend = useCallback(() => {

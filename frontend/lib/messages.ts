@@ -23,6 +23,9 @@ export type Message = {
 
 export type TxHashMap = Map<string, `0x${string}`>;
 
+// Map from prompt content to messageId (for matching conversation to events)
+export type PromptToMessageIdMap = Map<string, string>;
+
 export function formatTxHashShort(txHash: string): string {
   return txHash.slice(2, 8);
 }
@@ -39,14 +42,33 @@ export function buildMessagesFromConversation(
   conversation: readonly ConversationItem[],
   pendingMessage: PendingMessage | null,
   messageTxHashes: TxHashMap,
-  responseTxHashes: TxHashMap
+  responseTxHashes: TxHashMap,
+  promptToMessageId: PromptToMessageIdMap,
+  debug?: (label: string, ...args: unknown[]) => void
 ): Message[] {
   const messages: Message[] = [];
 
+  // Debug: log available tx hashes
+  if (debug) {
+    debug("Building messages", {
+      conversationLength: conversation.length,
+      promptToMessageId: Array.from(promptToMessageId.entries()),
+      messageTxHashes: Array.from(messageTxHashes.entries()),
+      responseTxHashes: Array.from(responseTxHashes.entries()),
+    });
+  }
+
   conversation.forEach((msg, i) => {
-    const messageId = BigInt(i + 1);
-    const userTxHash = messageTxHashes.get(messageId.toString());
-    const responseTxHash = responseTxHashes.get(messageId.toString());
+    // Look up messageId by prompt content (since messageId is global, not per-user)
+    const messageIdStr = promptToMessageId.get(msg.prompt);
+    const userTxHash = messageIdStr ? messageTxHashes.get(messageIdStr) : undefined;
+    const responseTxHash = messageIdStr ? responseTxHashes.get(messageIdStr) : undefined;
+
+    if (debug && !messageIdStr) {
+      debug("Missing messageId for prompt", { index: i, prompt: msg.prompt.slice(0, 30) });
+    }
+
+    const messageId = messageIdStr ? BigInt(messageIdStr) : undefined;
 
     messages.push({
       id: i * 2,
