@@ -66,4 +66,18 @@ export const chatOracleAbi = [
       { name: "response", type: "string", indexed: false },
     ],
   },
+  {
+    type: "function",
+    name: "getWithdrawableBalance",
+    inputs: [{ name: "user", type: "address" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "withdraw",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
 ] as const;

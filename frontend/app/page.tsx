@@ -144,6 +144,7 @@ export default function Home() {
   });
 
   const { writeContract, isPending, data: txHash, error: writeError, reset: resetWrite } = useWriteContract();
+  const { writeContract: withdrawContract, isPending: isWithdrawing, error: withdrawError, reset: resetWithdraw } = useWriteContract();
 
   const { isLoading: isConfirming, isSuccess: isConfirmed, error: txError } = useWaitForTransactionReceipt({
     hash: pendingMessage?.txHash,
@@ -336,6 +337,40 @@ export default function Home() {
     );
   }, [input, address, contractAddress, hasSubscription, depositAmount, writeContract]);
 
+  const handleWithdraw = useCallback(() => {
+    if (!contractAddress) return;
+    debug("Withdrawing from subscription");
+    withdrawContract(
+      {
+        address: contractAddress,
+        abi: chatOracleAbi,
+        functionName: "withdraw",
+        args: [],
+      },
+      {
+        onSuccess: (hash) => {
+          debug("Withdraw success", hash);
+          refetchSubscription();
+        },
+        onError: (error) => {
+          debug("Withdraw error", error);
+        },
+      }
+    );
+  }, [contractAddress, withdrawContract, refetchSubscription]);
+
+  // Handle withdraw errors
+  useEffect(() => {
+    if (withdrawError) {
+      debug("Withdraw error", withdrawError);
+      const errorDetails = (withdrawError as { shortMessage?: string }).shortMessage
+        || withdrawError.message
+        || "Withdraw failed";
+      setErrorMessage(errorDetails);
+      resetWithdraw();
+    }
+  }, [withdrawError, resetWithdraw]);
+
   const handleCopyLogs = useCallback(() => {
     navigator.clipboard.writeText(debugLogger.getLogs().join("\n"));
     alert("Logs copied to clipboard!");
@@ -360,6 +395,8 @@ export default function Home() {
         onDebugToggle={() => setShowDebug(!showDebug)}
         showDebug={showDebug}
         walletButton={<ConnectButton />}
+        onWithdraw={handleWithdraw}
+        isWithdrawing={isWithdrawing}
       />
 
       {showDebug && (

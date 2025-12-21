@@ -116,6 +116,18 @@ contract ChatOracle is Ownable {
         return _messageFlowIds[messageId];
     }
 
+    function getWithdrawableBalance(address user) external view returns (uint256) {
+        uint256 subscriptionId = _userSubscriptions[user];
+        if (subscriptionId == 0) return 0;
+        return IDepositManager(quexCore).withdrawableBalance(subscriptionId);
+    }
+
+    function withdraw() external {
+        uint256 subscriptionId = _userSubscriptions[msg.sender];
+        require(subscriptionId != 0, "No subscription");
+        IDepositManager(quexCore).withdraw(subscriptionId, msg.sender);
+    }
+
     function _createFlow(bytes calldata body) private returns (uint256 flowId) {
         RequestHeader[] memory headers = new RequestHeader[](1);
         headers[0] = RequestHeader({key: "Content-Type", value: "application/json"});
