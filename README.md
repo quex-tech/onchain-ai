@@ -1,5 +1,11 @@
 # Quex On-Chain AI Chat
 
+[![Frontend](https://github.com/catena2w/onchain-ai/actions/workflows/frontend.yml/badge.svg)](https://github.com/catena2w/onchain-ai/actions/workflows/frontend.yml)
+[![Contracts](https://github.com/catena2w/onchain-ai/actions/workflows/contracts.yml/badge.svg)](https://github.com/catena2w/onchain-ai/actions/workflows/contracts.yml)
+
+[![Frontend Coverage](https://codecov.io/gh/catena2w/onchain-ai/graph/badge.svg?flag=frontend)](https://codecov.io/gh/catena2w/onchain-ai)
+[![Contracts Coverage](https://codecov.io/gh/catena2w/onchain-ai/graph/badge.svg?flag=contracts)](https://codecov.io/gh/catena2w/onchain-ai)
+
 A ChatGPT-like interface where every request and response is recorded on-chain via [Quex](https://quex.tech) oracles.
 
 ## Architecture

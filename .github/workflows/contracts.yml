@@ -24,3 +24,15 @@ jobs:
 
       - name: Run tests
         run: forge test -vvv
+
+      - name: Generate coverage report
+        run: forge coverage --report lcov
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: contracts/lcov.info
+          flags: contracts
+          name: contracts-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
