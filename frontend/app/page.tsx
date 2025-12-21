@@ -9,23 +9,11 @@ import {
   useChainId,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { parseEther, toHex, formatEther } from "viem";
+import { parseEther, formatEther } from "viem";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { chatOracleAbi, quexCoreAbi } from "@/lib/abi";
 import { CONTRACT_ADDRESSES, QUEX_CORE_ADDRESSES, CHAINS, arbitrumSepolia } from "@/lib/config";
-
-const SYSTEM_PROMPT = "You are a helpful assistant responding to blockchain users. Keep responses concise.";
-
-function buildOpenAIBody(prompt: string): `0x${string}` {
-  const body = JSON.stringify({
-    model: "gpt-4o",
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: prompt },
-    ],
-  });
-  return toHex(new TextEncoder().encode(body));
-}
+import { buildOpenAIBody, getExplorerUrl } from "@/lib/utils";
 
 type Message = {
   id: number;
@@ -46,16 +34,6 @@ type PendingMessage = {
 // Store tx hashes for messages (messageId -> txHash)
 const messageTxHashes: Map<string, `0x${string}`> = new Map();
 const responseTxHashes: Map<string, `0x${string}`> = new Map();
-
-function getExplorerUrl(chainId: number, txHash: string): string {
-  const explorers: Record<number, string> = {
-    421614: "https://sepolia.arbiscan.io",
-    16600: "https://chainscan.0g.ai",
-    16601: "https://chainscan-newton.0g.ai",
-  };
-  const base = explorers[chainId] || "https://sepolia.arbiscan.io";
-  return `${base}/tx/${txHash}`;
-}
 
 // Debug log storage for UI display
 const debugLogs: string[] = [];
