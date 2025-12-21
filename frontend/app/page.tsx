@@ -17,23 +17,17 @@ import { CONTRACT_ADDRESSES, QUEX_CORE_ADDRESSES, CHAINS, arbitrumSepolia } from
 import { buildOpenAIBody, getExplorerUrl } from "@/lib/utils";
 import { createDebugLogger } from "@/lib/debug";
 import {
-  buildMessagesFromConversation,
+  buildMessagesFromEvents,
   formatBalance,
   hasActiveSubscription,
   type PendingMessage,
-  type TxHashMap,
-  type PromptToMessageIdMap,
+  type MessageSentLog,
+  type ResponseReceivedLog,
 } from "@/lib/messages";
 import { Header } from "@/components/Header";
 import { DebugPanel } from "@/components/DebugPanel";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ChatInput } from "@/components/ChatInput";
-
-// Store tx hashes for messages (messageId -> txHash)
-const messageTxHashes: TxHashMap = new Map();
-const responseTxHashes: TxHashMap = new Map();
-// Store prompt -> messageId mapping (to look up correct messageId for each prompt)
-const promptToMessageId: PromptToMessageIdMap = new Map();
 
 // Debug logger instance
 const debugLogger = createDebugLogger({ maxLogs: 50 });
@@ -50,7 +44,9 @@ export default function Home() {
   const [showDebug, setShowDebug] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [debugVersion, setDebugVersion] = useState(0);
-  const [txHashesVersion, setTxHashesVersion] = useState(0);
+  // Store event logs with guaranteed txHash (React state for proper re-renders)
+  const [messageSentLogs, setMessageSentLogs] = useState<MessageSentLog[]>([]);
+  const [responseReceivedLogs, setResponseReceivedLogs] = useState<ResponseReceivedLog[]>([]);
 
   // Register debug update callback
   useEffect(() => {
@@ -62,13 +58,14 @@ export default function Home() {
   const quexCoreAddress = QUEX_CORE_ADDRESSES[chainId];
   const currentChain = CHAINS.find((c) => c.id === chainId) ?? arbitrumSepolia;
 
-  // Fetch historical events on mount to populate tx hashes
+  // Fetch historical events on mount - events are the source of truth for messages
   useEffect(() => {
     if (!contractAddress || !address || !publicClient) return;
 
     const fetchEvents = async () => {
       try {
-        const messageLogs = await publicClient.getLogs({
+        // Fetch MessageSent events for this user
+        const rawMessageLogs = await publicClient.getLogs({
           address: contractAddress,
           event: {
             type: "event",
@@ -79,22 +76,24 @@ export default function Home() {
               { name: "prompt", type: "string", indexed: false },
             ],
           },
+          args: { user: address },
           fromBlock: 0n,
           toBlock: "latest",
         });
-        messageLogs.forEach((log) => {
-          const messageId = log.args.messageId?.toString();
-          const prompt = log.args.prompt;
-          if (messageId && log.transactionHash) {
-            messageTxHashes.set(messageId, log.transactionHash);
-            if (prompt) {
-              promptToMessageId.set(prompt, messageId);
-            }
-          }
-        });
-        debug("Fetched historical message events", { count: messageLogs.length });
 
-        const responseLogs = await publicClient.getLogs({
+        const fetchedMessageLogs: MessageSentLog[] = rawMessageLogs
+          .filter((log) => log.args.messageId !== undefined && log.args.prompt && log.transactionHash)
+          .map((log) => ({
+            messageId: log.args.messageId!,
+            prompt: log.args.prompt!,
+            txHash: log.transactionHash!,
+          }));
+        setMessageSentLogs(fetchedMessageLogs);
+        debug("Fetched historical message events", { count: fetchedMessageLogs.length });
+
+        // Fetch ResponseReceived events (get messageIds from message logs)
+        const messageIds = fetchedMessageLogs.map((m) => m.messageId);
+        const rawResponseLogs = await publicClient.getLogs({
           address: contractAddress,
           event: {
             type: "event",
@@ -107,19 +106,19 @@ export default function Home() {
           fromBlock: 0n,
           toBlock: "latest",
         });
-        responseLogs.forEach((log) => {
-          const messageId = log.args.messageId?.toString();
-          debug("ResponseReceived log", { messageId, txHash: log.transactionHash });
-          if (messageId && log.transactionHash) {
-            responseTxHashes.set(messageId, log.transactionHash);
-          }
-        });
-        debug("Fetched historical response events", {
-          count: responseLogs.length,
-          responseTxHashes: Array.from(responseTxHashes.entries())
-        });
 
-        setTxHashesVersion((n) => n + 1);
+        const fetchedResponseLogs: ResponseReceivedLog[] = rawResponseLogs
+          .filter((log) => {
+            const msgId = log.args.messageId;
+            return msgId !== undefined && log.args.response && log.transactionHash && messageIds.includes(msgId);
+          })
+          .map((log) => ({
+            messageId: log.args.messageId!,
+            response: log.args.response!,
+            txHash: log.transactionHash!,
+          }));
+        setResponseReceivedLogs(fetchedResponseLogs);
+        debug("Fetched historical response events", { count: fetchedResponseLogs.length });
       } catch (error) {
         debug("Error fetching historical events", error);
       }
@@ -144,14 +143,6 @@ export default function Home() {
     query: { enabled: !!subscriptionId && subscriptionId > 0n && !!quexCoreAddress },
   });
 
-  const { data: conversation, refetch: refetchConversation } = useReadContract({
-    address: contractAddress,
-    abi: chatOracleAbi,
-    functionName: "getConversation",
-    args: address ? [address] : undefined,
-    query: { enabled: !!address && !!contractAddress },
-  });
-
   const { writeContract, isPending, data: txHash, error: writeError, reset: resetWrite } = useWriteContract();
 
   const { isLoading: isConfirming, isSuccess: isConfirmed, error: txError } = useWaitForTransactionReceipt({
@@ -167,14 +158,22 @@ export default function Home() {
     eventName: "ResponseReceived",
     onLogs: (logs) => {
       debug("ResponseReceived event", logs);
-      logs.forEach((log) => {
-        const messageId = (log as { args?: { messageId?: bigint } }).args?.messageId;
-        if (messageId !== undefined && log.transactionHash) {
-          responseTxHashes.set(messageId.toString(), log.transactionHash);
-        }
-      });
-      setTxHashesVersion((n) => n + 1);
-      refetchConversation();
+      const newResponses: ResponseReceivedLog[] = logs
+        .filter((log) => {
+          const args = (log as { args?: { messageId?: bigint; response?: string } }).args;
+          return args?.messageId !== undefined && args?.response && log.transactionHash;
+        })
+        .map((log) => {
+          const args = (log as { args: { messageId: bigint; response: string } }).args;
+          return {
+            messageId: args.messageId,
+            response: args.response,
+            txHash: log.transactionHash as `0x${string}`,
+          };
+        });
+      if (newResponses.length > 0) {
+        setResponseReceivedLogs((prev) => [...prev, ...newResponses]);
+      }
     },
   });
 
@@ -185,19 +184,22 @@ export default function Home() {
     eventName: "MessageSent",
     onLogs: (logs) => {
       debug("MessageSent event", logs);
-      logs.forEach((log) => {
-        const args = (log as { args?: { messageId?: bigint; prompt?: string } }).args;
-        const messageId = args?.messageId;
-        const prompt = args?.prompt;
-        if (messageId !== undefined && log.transactionHash) {
-          messageTxHashes.set(messageId.toString(), log.transactionHash);
-          if (prompt) {
-            promptToMessageId.set(prompt, messageId.toString());
-          }
-        }
-      });
-      setTxHashesVersion((n) => n + 1);
-      refetchConversation();
+      const newMessages: MessageSentLog[] = logs
+        .filter((log) => {
+          const args = (log as { args?: { messageId?: bigint; prompt?: string } }).args;
+          return args?.messageId !== undefined && args?.prompt && log.transactionHash;
+        })
+        .map((log) => {
+          const args = (log as { args: { messageId: bigint; prompt: string } }).args;
+          return {
+            messageId: args.messageId,
+            prompt: args.prompt,
+            txHash: log.transactionHash as `0x${string}`,
+          };
+        });
+      if (newMessages.length > 0) {
+        setMessageSentLogs((prev) => [...prev, ...newMessages]);
+      }
       refetchSubscription();
     },
   });
@@ -239,7 +241,6 @@ export default function Home() {
       const updated = { ...pendingMessageRef.current, status: "confirmed" as const };
       pendingMessageRef.current = updated;
       setPendingMessage(updated);
-      refetchConversation();
       refetchSubscription();
       setTimeout(() => {
         debug("Clearing pending message after confirmation");
@@ -248,7 +249,7 @@ export default function Home() {
         resetWrite();
       }, 2000);
     }
-  }, [isConfirmed, refetchConversation, refetchSubscription, resetWrite]);
+  }, [isConfirmed, refetchSubscription, resetWrite]);
 
   // Handle tx error
   useEffect(() => {
@@ -260,15 +261,33 @@ export default function Home() {
     }
   }, [txError]);
 
-  // Build messages from conversation + pending
-  const messages = buildMessagesFromConversation(
-    conversation ?? [],
-    pendingMessage,
-    messageTxHashes,
-    responseTxHashes,
-    promptToMessageId,
-    debug
-  );
+  // Build messages from events - guaranteed to have txHash for confirmed messages
+  const confirmedMessages = buildMessagesFromEvents(messageSentLogs, responseReceivedLogs);
+
+  // Compute unique key for each message to avoid React key collisions
+  const messagesWithKeys = confirmedMessages.map((msg) => ({
+    ...msg,
+    id: Number(msg.messageId) * 2 + (msg.role === "assistant" ? 1 : 0),
+    status: "confirmed" as const,
+  }));
+
+  // Add pending message if it exists and not already confirmed
+  const pendingContent = pendingMessage?.content;
+  const isPendingAlreadyConfirmed = pendingContent &&
+    messagesWithKeys.some((m) => m.role === "user" && m.content === pendingContent);
+
+  const messages = isPendingAlreadyConfirmed
+    ? messagesWithKeys
+    : pendingMessage
+      ? [...messagesWithKeys, {
+          id: pendingMessage.id,
+          messageId: 0n,
+          role: "user" as const,
+          content: pendingMessage.content,
+          txHash: pendingMessage.txHash ?? ("0x" as `0x${string}`),
+          status: pendingMessage.status,
+        }]
+      : messagesWithKeys;
 
   const handleSend = useCallback(() => {
     if (!input.trim() || !address || !contractAddress) {
