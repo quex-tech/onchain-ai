@@ -203,10 +203,16 @@ export default function Home() {
     if (writeError) {
       debug("Write error", writeError);
       // Extract meaningful error message
-      const errorDetails = (writeError as { shortMessage?: string; reason?: string }).shortMessage
+      let errorDetails = (writeError as { shortMessage?: string; reason?: string }).shortMessage
         || (writeError as { reason?: string }).reason
         || writeError.message
         || "Transaction failed";
+
+      // Check for RPC-related errors and provide helpful guidance
+      if (errorDetails.includes("Internal JSON-RPC error")) {
+        errorDetails = "RPC connection issue. Try: 1) Switch RPC in MetaMask (Settings > Networks > Arbitrum Sepolia), 2) Use RPC: https://sepolia-rollup.arbitrum.io/rpc";
+      }
+
       setErrorMessage(errorDetails);
       pendingMessageRef.current = null;
       setPendingMessage(null);
