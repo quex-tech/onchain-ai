@@ -16,10 +16,10 @@ contract MockFlowRegistry {
 contract ChatOracleTest is Test {
     ChatOracle public oracle;
     MockFlowRegistry public mockRegistry;
-    address public user = address(0x1);
+    address public user = makeAddr("user");
     address public quexCore;
-    address public oraclePool = address(0x3);
-    address public tdAddress = address(0x4);
+    address public oraclePool = makeAddr("oraclePool");
+    address public tdAddress = makeAddr("tdAddress");
     bytes public encryptedApiKey = hex"1234567890abcdef";
 
     function setUp() public {
@@ -69,7 +69,7 @@ contract ChatOracleTest is Test {
     function test_setUp_canUpdateAddresses() public {
         oracle.setUp(oraclePool, tdAddress, encryptedApiKey);
 
-        address newOraclePool = address(0x99);
+        address newOraclePool = makeAddr("newOraclePool");
         oracle.setUp(newOraclePool, tdAddress, encryptedApiKey);
 
         assertEq(oracle.oraclePool(), newOraclePool);
@@ -137,7 +137,7 @@ contract ChatOracleTest is Test {
 
     function test_sendMessage_usersHaveSeparateSubscriptions() public {
         _initializeFlow();
-        address user2 = address(0x99);
+        address user2 = makeAddr("user2");
         vm.deal(user, 1 ether);
         vm.deal(user2, 1 ether);
 
@@ -222,6 +222,44 @@ contract ChatOracleTest is Test {
         vm.prank(quexCore);
         vm.expectRevert("Invalid ID type");
         oracle.processResponse(1, response, IdType.FlowId);
+    }
+
+    // === Fuzz tests ===
+
+    function testFuzz_sendMessage_storesAnyPrompt(string calldata prompt) public {
+        vm.assume(bytes(prompt).length > 0 && bytes(prompt).length < 1000);
+        _initializeFlow();
+        vm.deal(user, 1 ether);
+
+        vm.prank(user);
+        uint256 messageId = oracle.sendMessage{value: 0.1 ether}(prompt, _buildBody(prompt));
+
+        ChatOracle.Message[] memory messages = oracle.getConversation(user);
+        assertEq(messages[0].prompt, prompt);
+        assertEq(messageId, 1);
+    }
+
+    function testFuzz_sendMessage_multipleUsers(address randomUser) public {
+        vm.assume(randomUser != address(0) && randomUser != address(oracle));
+        _initializeFlow();
+        vm.deal(randomUser, 1 ether);
+
+        vm.prank(randomUser);
+        oracle.sendMessage{value: 0.1 ether}("Hello", _buildBody("Hello"));
+
+        assertEq(oracle.getMessageCount(randomUser), 1);
+        assertTrue(oracle.getUserSubscription(randomUser) != 0);
+    }
+
+    function testFuzz_sendMessage_variableDeposit(uint256 depositAmount) public {
+        vm.assume(depositAmount > 0 && depositAmount < 100 ether);
+        _initializeFlow();
+        vm.deal(user, depositAmount);
+
+        vm.prank(user);
+        oracle.sendMessage{value: depositAmount}("Hello", _buildBody("Hello"));
+
+        assertEq(oracle.getMessageCount(user), 1);
     }
 
     // === Dynamic flow tests ===
