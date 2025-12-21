@@ -22,8 +22,9 @@ When multiple Claude instances work in parallel:
 
 1. **Before starting work**: Read `.claude-sync.md` to see what other instances are working on
 2. **When starting a task**: Update your instance status (working on, files being edited)
-3. **Avoid conflicts**: Don't edit files owned by other instances
-4. **When done**: Update status and merge to main
+3. **Minimal ownership**: Only claim files you're actively editing - release immediately when done
+4. **Avoid conflicts**: Don't edit files owned by other instances
+5. **When done**: Update status, release file ownership, and merge to main
 
 ### Sync File Setup
 - `.claude-sync.md` is gitignored (contains internal communication)
