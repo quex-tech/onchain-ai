@@ -162,6 +162,7 @@ export default function Home() {
           debug("Stored response tx", { messageId: messageId.toString(), txHash: log.transactionHash });
         }
       });
+      setTxHashesVersion((n) => n + 1);
       refetchConversation();
     },
   });
@@ -180,6 +181,7 @@ export default function Home() {
           debug("Stored message tx", { messageId: messageId.toString(), txHash: log.transactionHash });
         }
       });
+      setTxHashesVersion((n) => n + 1);
       refetchConversation();
       refetchSubscription();
     },
