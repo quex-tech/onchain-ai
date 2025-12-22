@@ -196,6 +196,60 @@ export default function Home() {
     },
   });
 
+  // Poll for responses every 3 seconds (more reliable than event watching)
+  useEffect(() => {
+    if (!publicClient || !contractAddress || messageSentLogs.length === 0) return;
+
+    const pollForResponses = async () => {
+      const messageIds = messageSentLogs.map((m) => m.messageId);
+      const existingResponseIds = new Set(responseReceivedLogs.map((r) => r.messageId));
+      const missingResponseIds = messageIds.filter((id) => !existingResponseIds.has(id));
+
+      if (missingResponseIds.length === 0) return;
+
+      try {
+        const rawResponseLogs = await publicClient.getLogs({
+          address: contractAddress,
+          event: {
+            type: "event",
+            name: "ResponseReceived",
+            inputs: [
+              { name: "messageId", type: "uint256", indexed: true },
+              { name: "response", type: "string", indexed: false },
+            ],
+          },
+          fromBlock: "earliest",
+          toBlock: "latest",
+        });
+
+        const newResponses: ResponseReceivedLog[] = rawResponseLogs
+          .filter((log) => {
+            const msgId = log.args.messageId;
+            return msgId !== undefined && log.args.response && log.transactionHash &&
+                   missingResponseIds.includes(msgId) && !existingResponseIds.has(msgId);
+          })
+          .map((log) => ({
+            messageId: log.args.messageId!,
+            response: log.args.response!,
+            txHash: log.transactionHash!,
+          }));
+
+        if (newResponses.length > 0) {
+          debug("Polled new responses", { count: newResponses.length });
+          setResponseReceivedLogs((prev) => [...prev, ...newResponses]);
+        }
+      } catch (error) {
+        debug("Poll error", error);
+      }
+    };
+
+    // Initial poll
+    pollForResponses();
+    // Poll every 3 seconds
+    const interval = setInterval(pollForResponses, 3000);
+    return () => clearInterval(interval);
+  }, [publicClient, contractAddress, messageSentLogs, responseReceivedLogs]);
+
   // Watch for MessageSent events
   useWatchContractEvent({
     address: contractAddress,
