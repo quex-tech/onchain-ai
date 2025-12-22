@@ -149,6 +149,7 @@ contract ChatOracle is Ownable {
         config = config.withFilter(".choices[0].message.content");
         config = config.withSchema("string");
         config = config.withCallback(address(this), this.processResponse.selector);
+        config = config.withGasLimit(1_000_000); // Increased from default 500k for longer responses
 
         flowId = config.build();
     }
