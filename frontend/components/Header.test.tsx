@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { Header } from "./Header";
 
 describe("Header", () => {
-  it("renders title", () => {
+  it("renders logo and title", () => {
     render(
       <Header
         hasSubscription={false}
@@ -12,9 +12,8 @@ describe("Header", () => {
       />
     );
 
-    expect(screen.getByRole("heading")).toBeInTheDocument();
-    expect(screen.getByText("On-Chain")).toBeInTheDocument();
-    expect(screen.getByText("AI")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Quex" })).toBeInTheDocument();
+    expect(screen.getByText("On-Chain AI")).toBeInTheDocument();
   });
 
   it("shows subscription balance when has subscription", () => {
