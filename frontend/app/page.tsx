@@ -225,6 +225,8 @@ export default function Home() {
 
       if (errorDetails.includes("rate limit") || errorDetails.includes("exceeds defined limit")) {
         errorDetails = "Network is busy (rate limited). Please wait a moment and try again.";
+      } else if (errorDetails.includes("Failed to fetch")) {
+        errorDetails = "Oracle failed to reach OpenAI. This could be a temporary issue with the Quex oracle or OpenAI service. Try again in a moment.";
       } else if (errorDetails.includes("Internal JSON-RPC error")) {
         errorDetails = "RPC connection issue. Try: 1) Switch RPC in MetaMask (Settings > Networks > Arbitrum Sepolia), 2) Use RPC: https://sepolia-rollup.arbitrum.io/rpc";
       }
