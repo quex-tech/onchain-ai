@@ -39,7 +39,7 @@ export const config = getDefaultConfig({
 
 // Contract addresses per chain - update after deployment
 export const CONTRACT_ADDRESSES: Record<number, `0x${string}`> = {
-  [arbitrumSepolia.id]: "0x2396402CBc65E469255407562123EE22fBa01eA7",
+  [arbitrumSepolia.id]: "0xf265bE3c54572728D9fCCa9E61A4144b2D03EDE7",
   [zgMainnet.id]: "0x0000000000000000000000000000000000000000",
   [zgTestnet.id]: "0x0000000000000000000000000000000000000000",
 };
