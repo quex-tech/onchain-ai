@@ -10,14 +10,13 @@ type OpenAIMessage = { role: "system" | "user" | "assistant"; content: string };
 
 type BuildOptions = {
   history?: Message[];
-  webSearch?: boolean;
 };
 
 export function buildOpenAIBody(
   prompt: string,
   options: BuildOptions = {}
 ): `0x${string}` {
-  const { history = [], webSearch = false } = options;
+  const { history = [] } = options;
 
   const messages: OpenAIMessage[] = [
     { role: "system", content: SYSTEM_PROMPT },
@@ -33,13 +32,9 @@ export function buildOpenAIBody(
   messages.push({ role: "user", content: prompt });
 
   const body: Record<string, unknown> = {
-    model: "gpt-4o",
+    model: "gpt-4o-search-preview",
     messages,
   };
-
-  if (webSearch) {
-    body.tools = [{ type: "web_search_preview" }];
-  }
 
   return toHex(new TextEncoder().encode(JSON.stringify(body)));
 }

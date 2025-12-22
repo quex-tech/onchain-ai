@@ -9,7 +9,7 @@ describe("buildOpenAIBody", () => {
     const decoded = new TextDecoder().decode(fromHex(hex, "bytes"));
     const parsed = JSON.parse(decoded);
 
-    expect(parsed.model).toBe("gpt-4o");
+    expect(parsed.model).toBe("gpt-4o-search-preview");
     expect(parsed.messages).toHaveLength(2);
     expect(parsed.messages[0].role).toBe("system");
     expect(parsed.messages[1].role).toBe("user");
@@ -52,22 +52,5 @@ describe("buildOpenAIBody", () => {
 
     // system + MAX_HISTORY_MESSAGES + 1 new
     expect(parsed.messages).toHaveLength(1 + MAX_HISTORY_MESSAGES + 1);
-  });
-
-  it("enables web search when option is set", () => {
-    const hex = buildOpenAIBody("Search the web for latest news", { webSearch: true });
-    const decoded = new TextDecoder().decode(fromHex(hex, "bytes"));
-    const parsed = JSON.parse(decoded);
-
-    expect(parsed.tools).toBeDefined();
-    expect(parsed.tools).toContainEqual({ type: "web_search_preview" });
-  });
-
-  it("does not include tools when webSearch is false", () => {
-    const hex = buildOpenAIBody("Hello", { webSearch: false });
-    const decoded = new TextDecoder().decode(fromHex(hex, "bytes"));
-    const parsed = JSON.parse(decoded);
-
-    expect(parsed.tools).toBeUndefined();
   });
 });
