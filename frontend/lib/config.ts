@@ -1,6 +1,17 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { defineChain } from "viem";
-import { arbitrumSepolia } from "viem/chains";
+import { arbitrumSepolia as baseArbitrumSepolia } from "viem/chains";
+
+// Override Arbitrum Sepolia with custom RPC if provided
+const arbSepoliaRpc = process.env.NEXT_PUBLIC_ARB_SEPOLIA_RPC;
+export const arbitrumSepolia = arbSepoliaRpc
+  ? {
+      ...baseArbitrumSepolia,
+      rpcUrls: {
+        default: { http: [arbSepoliaRpc] },
+      },
+    }
+  : baseArbitrumSepolia;
 
 export const zgMainnet = defineChain({
   id: 16600,
@@ -25,8 +36,6 @@ export const zgTestnet = defineChain({
     default: { name: "0G Explorer", url: "https://chainscan-newton.0g.ai" },
   },
 });
-
-export { arbitrumSepolia };
 
 export const CHAINS = [arbitrumSepolia, zgMainnet, zgTestnet] as const;
 
