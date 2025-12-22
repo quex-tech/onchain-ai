@@ -12,7 +12,9 @@ describe("Header", () => {
       />
     );
 
-    expect(screen.getByText("On-Chain AI Chat")).toBeInTheDocument();
+    expect(screen.getByRole("heading")).toBeInTheDocument();
+    expect(screen.getByText("On-Chain")).toBeInTheDocument();
+    expect(screen.getByText("AI")).toBeInTheDocument();
   });
 
   it("shows subscription balance when has subscription", () => {
@@ -65,6 +67,8 @@ describe("Header", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: /hide debug/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /hide debug/i })
+    ).toBeInTheDocument();
   });
 });
