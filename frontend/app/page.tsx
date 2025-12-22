@@ -5,12 +5,13 @@ import {
   useAccount,
   useReadContract,
   useWriteContract,
+  useSendTransaction,
   useWatchContractEvent,
   useChainId,
   useWaitForTransactionReceipt,
   usePublicClient,
 } from "wagmi";
-import { parseEther } from "viem";
+import { parseEther, encodeFunctionData } from "viem";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { chatOracleAbi, quexCoreAbi } from "@/lib/abi";
 import { CONTRACT_ADDRESSES, QUEX_CORE_ADDRESSES, CHAINS, arbitrumSepolia } from "@/lib/config";
@@ -153,7 +154,8 @@ export default function Home() {
     query: { enabled: !!subscriptionId && subscriptionId > 0n && !!quexCoreAddress },
   });
 
-  const { writeContract, isPending, data: txHash, error: writeError, reset: resetWrite } = useWriteContract();
+  // Use sendTransaction to skip viem's simulation (avoids MetaMask RPC issues)
+  const { sendTransaction, isPending, data: txHash, error: writeError, reset: resetWrite } = useSendTransaction();
   const { writeContract: withdrawContract, isPending: isWithdrawing, error: withdrawError, reset: resetWithdraw } = useWriteContract();
 
   const { isLoading: isConfirming, isSuccess: isConfirmed, error: txError } = useWaitForTransactionReceipt({
@@ -330,27 +332,32 @@ export default function Home() {
     setPendingMessage(pending);
     setInput("");
 
-    writeContract(
+    // Encode calldata manually to bypass viem's simulation (which fails through MetaMask's RPC)
+    const data = encodeFunctionData({
+      abi: chatOracleAbi,
+      functionName: "sendMessage",
+      args: [messageContent, body],
+    });
+
+    sendTransaction(
       {
-        address: contractAddress,
-        abi: chatOracleAbi,
-        functionName: "sendMessage",
-        args: [messageContent, body],
+        to: contractAddress,
+        data,
         value,
         gas: 2_000_000n,
       },
       {
         onSuccess: (hash) => {
-          debug("writeContract onSuccess", hash);
+          debug("sendTransaction onSuccess", hash);
         },
         onError: (error) => {
-          debug("writeContract onError", error);
+          debug("sendTransaction onError", error);
           pendingMessageRef.current = null;
           setPendingMessage(null);
         },
       }
     );
-  }, [input, address, contractAddress, showDepositPrompt, depositAmount, writeContract, messages]);
+  }, [input, address, contractAddress, showDepositPrompt, depositAmount, sendTransaction, messages]);
 
   const handleWithdraw = useCallback(() => {
     if (!contractAddress) return;
