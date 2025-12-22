@@ -2,7 +2,7 @@ import { toHex } from "viem";
 import type { Message } from "./messages";
 
 const SYSTEM_PROMPT =
-  "You are a helpful assistant responding to blockchain users. Keep responses concise.";
+  "You are a helpful assistant responding to blockchain users. Keep responses very short (max 200 words). Do not include URLs or citations - just the key facts.";
 
 export const MAX_HISTORY_MESSAGES = 20;
 
@@ -34,6 +34,7 @@ export function buildOpenAIBody(
   const body: Record<string, unknown> = {
     model: "gpt-4o-search-preview",
     messages,
+    max_tokens: 300, // Limit response size to avoid callback gas issues
   };
 
   return toHex(new TextEncoder().encode(JSON.stringify(body)));
