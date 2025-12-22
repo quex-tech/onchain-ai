@@ -69,7 +69,10 @@ export default function Home() {
     }
   }, [publicClient, chainId]);
 
-  // Fetch historical events on mount - events are the source of truth for messages
+  // Track when to refetch events (incremented after tx confirmation)
+  const [eventRefetchTrigger, setEventRefetchTrigger] = useState(0);
+
+  // Fetch historical events on mount and after tx confirmation
   useEffect(() => {
     if (!contractAddress || !address || !publicClient) return;
 
@@ -136,7 +139,7 @@ export default function Home() {
     };
 
     fetchEvents();
-  }, [contractAddress, address, publicClient]);
+  }, [contractAddress, address, publicClient, eventRefetchTrigger]);
 
   const { data: subscriptionId, refetch: refetchSubscription } = useReadContract({
     address: contractAddress,
@@ -262,6 +265,8 @@ export default function Home() {
       pendingMessageRef.current = updated;
       setPendingMessage(updated);
       refetchSubscription();
+      // Trigger refetch of events to ensure we have the latest data
+      setEventRefetchTrigger((n) => n + 1);
       setTimeout(() => {
         debug("Clearing pending message after confirmation");
         pendingMessageRef.current = null;
