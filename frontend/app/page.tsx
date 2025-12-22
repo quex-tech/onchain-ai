@@ -170,13 +170,18 @@ export default function Home() {
   const displayBalance = optimisticBalance !== null ? optimisticBalance : subscriptionBalance;
   const showDepositPrompt = needsDeposit(subscriptionId, displayBalance);
 
-  // Watch for ResponseReceived events
+  // Check if we're waiting for any responses
+  const awaitingResponses = messageSentLogs.length > responseReceivedLogs.length;
+
+  // Watch for ResponseReceived events (with explicit polling for RPC compatibility)
   useWatchContractEvent({
     address: contractAddress,
     abi: chatOracleAbi,
     eventName: "ResponseReceived",
+    poll: true, // Force polling mode (more reliable than eth_subscribe)
+    pollingInterval: 2_000, // Poll every 2 seconds
     onLogs: (logs) => {
-      debug("ResponseReceived event", logs);
+      debug("ResponseReceived event (watch)", logs);
       const newResponses: ResponseReceivedLog[] = logs
         .filter((log) => {
           const args = (log as { args?: { messageId?: bigint; response?: string } }).args;
@@ -194,11 +199,14 @@ export default function Home() {
         setResponseReceivedLogs((prev) => [...prev, ...newResponses]);
       }
     },
+    onError: (error) => {
+      debug("ResponseReceived watch error", error);
+    },
   });
 
-  // Poll for responses every 3 seconds (more reliable than event watching)
+  // Fallback polling - only when waiting for responses (every 3 seconds)
   useEffect(() => {
-    if (!publicClient || !contractAddress || messageSentLogs.length === 0) return;
+    if (!publicClient || !contractAddress || !awaitingResponses) return;
 
     const pollForResponses = async () => {
       const messageIds = messageSentLogs.map((m) => m.messageId);
@@ -206,6 +214,8 @@ export default function Home() {
       const missingResponseIds = messageIds.filter((id) => !existingResponseIds.has(id));
 
       if (missingResponseIds.length === 0) return;
+
+      debug("Polling for responses", { missingCount: missingResponseIds.length });
 
       try {
         const rawResponseLogs = await publicClient.getLogs({
@@ -243,20 +253,20 @@ export default function Home() {
       }
     };
 
-    // Initial poll
-    pollForResponses();
-    // Poll every 3 seconds
+    // Poll every 3 seconds while waiting
     const interval = setInterval(pollForResponses, 3000);
     return () => clearInterval(interval);
-  }, [publicClient, contractAddress, messageSentLogs, responseReceivedLogs]);
+  }, [publicClient, contractAddress, messageSentLogs, responseReceivedLogs, awaitingResponses]);
 
-  // Watch for MessageSent events
+  // Watch for MessageSent events (with explicit polling for RPC compatibility)
   useWatchContractEvent({
     address: contractAddress,
     abi: chatOracleAbi,
     eventName: "MessageSent",
+    poll: true,
+    pollingInterval: 2_000,
     onLogs: (logs) => {
-      debug("MessageSent event", logs);
+      debug("MessageSent event (watch)", logs);
       const newMessages: MessageSentLog[] = logs
         .filter((log) => {
           const args = (log as { args?: { messageId?: bigint; prompt?: string } }).args;
