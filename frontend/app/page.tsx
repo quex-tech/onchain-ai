@@ -383,7 +383,7 @@ export default function Home() {
       <main className="min-h-screen flex flex-col items-center justify-center bg-black gap-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-white mb-2">On-Chain AI Chat</h1>
-          <p className="text-gray-400">Powered by <span className="text-[#7a00df] font-medium">Quex</span> Oracle</p>
+          <p className="text-gray-400">Powered by <span className="text-[#00d084] font-medium">Quex</span> Oracle</p>
         </div>
         <p className="text-gray-500 text-sm max-w-md text-center">
           Every message is recorded on-chain with verifiable AI responses through trusted execution
@@ -453,14 +453,14 @@ export default function Home() {
           </div>
         )}
         {!hasSubscription && (
-          <div className="mb-3 p-3 bg-[#7a00df]/10 border border-[#7a00df]/30 rounded-xl text-sm">
+          <div className="mb-3 p-3 bg-[#00d084]/10 border border-[#00d084]/30 rounded-xl text-sm">
             <span className="text-gray-200">First message requires a deposit to create subscription.</span>
             <div className="mt-2 flex items-center gap-2">
               <input
                 type="number"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
-                className="w-24 px-3 py-1.5 bg-[#1a1a2e] border border-[#7a00df]/30 rounded-lg text-white focus:outline-none focus:border-[#7a00df]"
+                className="w-24 px-3 py-1.5 bg-[#1a1a2e] border border-[#00d084]/30 rounded-lg text-white focus:outline-none focus:border-[#00d084]"
                 step="0.01"
                 min="0.001"
               />

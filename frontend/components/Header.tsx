@@ -53,7 +53,7 @@ export function Header({
           <button
             onClick={onWithdraw}
             disabled={isWithdrawing}
-            className="text-xs px-3 py-1.5 bg-[#7a00df] text-white rounded-full hover:bg-[#8a10ef] disabled:opacity-50 transition-colors"
+            className="text-xs px-3 py-1.5 bg-[#00d084] text-white rounded-full hover:bg-[#00e090] disabled:opacity-50 transition-colors"
           >
             {isWithdrawing ? "Withdrawing..." : "Withdraw"}
           </button>

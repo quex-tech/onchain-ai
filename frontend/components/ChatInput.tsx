@@ -25,13 +25,13 @@ export function ChatInput({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Type your message..."
-        className="flex-1 px-4 py-3 bg-[#1a1a2e] border border-[#2a2a3e] rounded-full focus:outline-none focus:border-[#7a00df] transition-colors"
+        className="flex-1 px-4 py-3 bg-[#1a1a2e] border border-[#2a2a3e] rounded-full focus:outline-none focus:border-[#00d084] transition-colors"
         disabled={isPending}
       />
       <button
         onClick={onSend}
         disabled={isPending}
-        className="px-6 py-3 bg-[#7a00df] text-white rounded-full hover:bg-[#8a10ef] disabled:opacity-50 font-medium transition-colors"
+        className="px-6 py-3 bg-[#00d084] text-white rounded-full hover:bg-[#00e090] disabled:opacity-50 font-medium transition-colors"
       >
         {isPending ? "Sending..." : "Send"}
       </button>
