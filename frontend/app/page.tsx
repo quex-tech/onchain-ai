@@ -409,7 +409,7 @@ export default function Home() {
         to: contractAddress,
         data,
         value,
-        gas: 2_000_000n,
+        gas: 4_000_000n, // Large to handle long conversation histories
       },
       {
         onSuccess: (hash) => {
