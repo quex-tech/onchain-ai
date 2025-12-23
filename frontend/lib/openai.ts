@@ -4,8 +4,8 @@ import type { Message } from "./messages";
 const SYSTEM_PROMPT =
   "You are an on-chain AI, living entirely on the blockchain. Respond fast and precise. Be direct, skip fluff. Max 150 words. No URLs or citations.";
 
-export const MAX_HISTORY_MESSAGES = 6; // Keep history short to reduce gas costs
-const MAX_MESSAGE_CHARS = 500; // Truncate long messages to reduce calldata size
+export const MAX_HISTORY_MESSAGES = 2; // Keep history very short for MetaMask RPC compatibility
+const MAX_MESSAGE_CHARS = 200; // Truncate long messages to reduce calldata size
 
 type OpenAIMessage = { role: "system" | "user" | "assistant"; content: string };
 
