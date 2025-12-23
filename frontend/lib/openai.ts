@@ -4,7 +4,7 @@ import type { Message } from "./messages";
 const SYSTEM_PROMPT =
   "You are a helpful assistant responding to blockchain users. Keep responses very short (max 200 words). Do not include URLs or citations - just the key facts.";
 
-export const MAX_HISTORY_MESSAGES = 20;
+export const MAX_HISTORY_MESSAGES = 6; // Keep history short to reduce gas costs
 
 type OpenAIMessage = { role: "system" | "user" | "assistant"; content: string };
 
