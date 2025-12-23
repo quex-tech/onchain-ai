@@ -2,7 +2,7 @@ import { toHex } from "viem";
 import type { Message } from "./messages";
 
 const SYSTEM_PROMPT =
-  "You are a helpful assistant responding to blockchain users. Keep responses very short (max 200 words). Do not include URLs or citations - just the key facts.";
+  "You are an on-chain AI, living entirely on the blockchain. Respond fast and precise. Be direct, skip fluff. Max 150 words. No URLs or citations.";
 
 export const MAX_HISTORY_MESSAGES = 6; // Keep history short to reduce gas costs
 const MAX_MESSAGE_CHARS = 500; // Truncate long messages to reduce calldata size
