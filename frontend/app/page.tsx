@@ -175,14 +175,21 @@ export default function Home() {
 
   // Helper to add responses without duplicates (first one wins)
   const addResponsesIfNew = useCallback((newResponses: ResponseReceivedLog[], source: string) => {
-    if (newResponses.length === 0) return;
+    if (newResponses.length === 0) {
+      debug(`${source}: no responses to add`);
+      return;
+    }
     setResponseReceivedLogs((prev) => {
       const existingIds = new Set(prev.map((r) => r.messageId));
       const unique = newResponses.filter((r) => !existingIds.has(r.messageId));
       if (unique.length > 0) {
-        debug(`New responses from ${source}`, { count: unique.length, ids: unique.map(r => Number(r.messageId)) });
+        debug(`${source}: adding NEW responses`, { count: unique.length, ids: unique.map(r => Number(r.messageId)) });
         return [...prev, ...unique];
       }
+      debug(`${source}: all responses already exist`, {
+        incoming: newResponses.map(r => Number(r.messageId)),
+        existing: [...existingIds].map(id => Number(id))
+      });
       return prev;
     });
   }, []);
@@ -195,6 +202,7 @@ export default function Home() {
     poll: true,
     pollingInterval: 2_000,
     onLogs: (logs) => {
+      debug("Watch poll triggered", { rawLogsCount: logs.length });
       const responses: ResponseReceivedLog[] = logs
         .filter((log) => {
           const args = (log as { args?: { messageId?: bigint; response?: string } }).args;
@@ -208,6 +216,9 @@ export default function Home() {
             txHash: log.transactionHash as `0x${string}`,
           };
         });
+      if (responses.length > 0) {
+        debug("Watch poll found responses", { count: responses.length, ids: responses.map(r => Number(r.messageId)) });
+      }
       addResponsesIfNew(responses, "watch");
     },
     onError: (error) => {
@@ -217,9 +228,17 @@ export default function Home() {
 
   // Polling fallback - only active when waiting for responses (races with subscription)
   useEffect(() => {
-    if (!publicClient || !contractAddress || !awaitingResponses) return;
+    if (!publicClient || !contractAddress || !awaitingResponses) {
+      if (awaitingResponses === false) {
+        debug("Poll disabled", { reason: "no pending responses" });
+      }
+      return;
+    }
+
+    debug("Poll enabled", { awaitingResponses, messageSent: messageSentLogs.length, responsesReceived: responseReceivedLogs.length });
 
     const pollForResponses = async () => {
+      debug("Poll attempt starting...");
       try {
         const rawResponseLogs = await publicClient.getLogs({
           address: contractAddress,
@@ -235,6 +254,8 @@ export default function Home() {
           toBlock: "latest",
         });
 
+        debug("Poll getLogs returned", { rawCount: rawResponseLogs.length });
+
         const responses: ResponseReceivedLog[] = rawResponseLogs
           .filter((log) => log.args.messageId !== undefined && log.args.response && log.transactionHash)
           .map((log) => ({
@@ -243,16 +264,23 @@ export default function Home() {
             txHash: log.transactionHash!,
           }));
 
+        debug("Poll filtered responses", {
+          count: responses.length,
+          ids: responses.map(r => Number(r.messageId)),
+          existingIds: responseReceivedLogs.map(r => Number(r.messageId))
+        });
+
         addResponsesIfNew(responses, "poll");
       } catch (error) {
         debug("Poll error", error);
       }
     };
 
-    // Poll every 3 seconds while waiting for responses
+    // Poll immediately, then every 3 seconds
+    pollForResponses();
     const interval = setInterval(pollForResponses, 3000);
     return () => clearInterval(interval);
-  }, [publicClient, contractAddress, awaitingResponses, addResponsesIfNew]);
+  }, [publicClient, contractAddress, awaitingResponses, addResponsesIfNew, messageSentLogs.length, responseReceivedLogs]);
 
   // Watch for MessageSent events (with explicit polling for RPC compatibility)
   useWatchContractEvent({
