@@ -29,8 +29,8 @@ contract DeployScript is Script {
             oraclePool = ARB_SEPOLIA_ORACLE_POOL;
             tdAddress = ARB_SEPOLIA_TD_ADDRESS;
             console.log("Deploying to Arbitrum Sepolia...");
-        } else if (chainId == 16600) {
-            // 0G Mainnet
+        } else if (chainId == 16661) {
+            // 0G Mainnet (Aristotle)
             quexCore = ZG_MAINNET_QUEX_CORE;
             oraclePool = ZG_MAINNET_ORACLE_POOL;
             tdAddress = ZG_MAINNET_TD_ADDRESS;
