@@ -7,8 +7,8 @@ describe("getExplorerUrl", () => {
     expect(url).toBe("https://sepolia.arbiscan.io/tx/0xabc123");
   });
 
-  it("returns 0G mainnet URL for chain 16600", () => {
-    const url = getExplorerUrl(16600, "0xdef456");
+  it("returns 0G mainnet URL for chain 16661", () => {
+    const url = getExplorerUrl(16661, "0xdef456");
     expect(url).toBe("https://chainscan.0g.ai/tx/0xdef456");
   });
 

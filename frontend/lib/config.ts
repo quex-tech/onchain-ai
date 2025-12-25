@@ -59,3 +59,10 @@ export const QUEX_CORE_ADDRESSES: Record<number, `0x${string}`> = {
   [zgMainnet.id]: "0x48f15775Bc2d83BA18485FE19D4BC6a7ad90293c",
   [zgTestnet.id]: "0x0000000000000000000000000000000000000000",
 };
+
+// Block explorer URLs per chain
+export const EXPLORER_URLS: Record<number, string> = {
+  [arbitrumSepolia.id]: "https://sepolia.arbiscan.io",
+  [zgMainnet.id]: "https://chainscan.0g.ai",
+  [zgTestnet.id]: "https://chainscan-newton.0g.ai",
+};
