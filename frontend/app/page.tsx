@@ -14,7 +14,7 @@ import {
 import { parseEther, encodeFunctionData } from "viem";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { chatOracleAbi, quexCoreAbi } from "@/lib/abi";
-import { CONTRACT_ADDRESSES, QUEX_CORE_ADDRESSES, CHAINS, arbitrumSepolia } from "@/lib/config";
+import { CONTRACT_ADDRESSES, QUEX_CORE_ADDRESSES, CHAINS, arbitrumSepolia, DEFAULT_DEPOSIT } from "@/lib/config";
 import { buildOpenAIBody, getExplorerUrl } from "@/lib/utils";
 import { createDebugLogger } from "@/lib/debug";
 import {
@@ -40,7 +40,7 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const [input, setInput] = useState("");
-  const [depositAmount, setDepositAmount] = useState("0.01");
+  const [depositAmount, setDepositAmount] = useState(() => DEFAULT_DEPOSIT[chainId] || "0.01");
   const [pendingMessage, setPendingMessage] = useState<PendingMessage | null>(null);
   const pendingMessageRef = useRef<PendingMessage | null>(null);
   const [showDebug, setShowDebug] = useState(false);
@@ -60,6 +60,11 @@ export default function Home() {
   const contractAddress = CONTRACT_ADDRESSES[chainId];
   const quexCoreAddress = QUEX_CORE_ADDRESSES[chainId];
   const currentChain = CHAINS.find((c) => c.id === chainId) ?? arbitrumSepolia;
+
+  // Update deposit amount when chain changes
+  useEffect(() => {
+    setDepositAmount(DEFAULT_DEPOSIT[chainId] || "0.01");
+  }, [chainId]);
 
   // Log RPC info on mount
   useEffect(() => {
