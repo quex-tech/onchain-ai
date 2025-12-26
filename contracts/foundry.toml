@@ -2,6 +2,7 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+fs_permissions = [{ access = "read", path = "../chains.json" }]
 
 remappings = [
     "quex-v1-interfaces/=lib/quex-v1-interfaces/",
