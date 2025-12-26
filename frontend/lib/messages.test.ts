@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import fc from "fast-check";
 import {
   buildMessagesFromConversation,
   buildMessagesFromEvents,
@@ -256,6 +257,186 @@ describe("buildMessagesFromEvents", () => {
       expect(msg.txHash).toBeDefined();
       expect(typeof msg.txHash).toBe("string");
       expect(msg.txHash.startsWith("0x")).toBe(true);
+    });
+  });
+});
+
+// Property-based tests
+describe("property tests", () => {
+  // Arbitrary for valid tx hash (0x + 64 hex chars)
+  const hexCharArb = fc.constantFrom(..."0123456789abcdef".split(""));
+  const txHashArb = fc.array(hexCharArb, { minLength: 64, maxLength: 64 })
+    .map((chars) => `0x${chars.join("")}` as `0x${string}`);
+
+  describe("formatTxHashShort", () => {
+    it("always returns at most 6 characters", () => {
+      fc.assert(
+        fc.property(fc.string(), (input) => {
+          const result = formatTxHashShort(input);
+          return result.length <= 6;
+        })
+      );
+    });
+
+    it("returns chars from index 2 to 8 for valid tx hashes", () => {
+      fc.assert(
+        fc.property(txHashArb, (txHash) => {
+          const result = formatTxHashShort(txHash);
+          return result === txHash.slice(2, 8);
+        })
+      );
+    });
+  });
+
+  describe("formatBalance", () => {
+    it("always returns string with 6 decimal places", () => {
+      fc.assert(
+        fc.property(
+          fc.bigInt({ min: 0n, max: 10n ** 30n }),
+          (balance) => {
+            const result = formatBalance(balance);
+            return /^\d+\.\d{6}$/.test(result);
+          }
+        )
+      );
+    });
+
+    it("never returns negative values for non-negative input", () => {
+      fc.assert(
+        fc.property(
+          fc.bigInt({ min: 0n, max: 10n ** 30n }),
+          (balance) => {
+            const result = formatBalance(balance);
+            return parseFloat(result) >= 0;
+          }
+        )
+      );
+    });
+  });
+
+  describe("hasActiveSubscription", () => {
+    it("returns false for undefined", () => {
+      expect(hasActiveSubscription(undefined)).toBe(false);
+    });
+
+    it("returns true iff subscriptionId > 0", () => {
+      fc.assert(
+        fc.property(
+          fc.bigInt({ min: 0n, max: 10n ** 20n }),
+          (subscriptionId) => {
+            const result = hasActiveSubscription(subscriptionId);
+            return result === (subscriptionId > 0n);
+          }
+        )
+      );
+    });
+  });
+
+  describe("needsDeposit", () => {
+    it("returns false only when subscription > 0 AND balance > 0", () => {
+      fc.assert(
+        fc.property(
+          fc.option(fc.bigInt({ min: 0n, max: 10n ** 20n }), { nil: undefined }),
+          fc.option(fc.bigInt({ min: 0n, max: 10n ** 20n }), { nil: undefined }),
+          (subscriptionId, balance) => {
+            const result = needsDeposit(subscriptionId, balance);
+            const hasSubscription = subscriptionId !== undefined && subscriptionId > 0n;
+            const hasBalance = balance !== undefined && balance > 0n;
+
+            // Needs deposit unless both subscription and balance exist and are positive
+            const expected = !(hasSubscription && hasBalance);
+            return result === expected;
+          }
+        )
+      );
+    });
+  });
+
+  describe("buildMessagesFromEvents", () => {
+    const messageLogArb = fc.record({
+      messageId: fc.bigInt({ min: 1n, max: 10000n }),
+      prompt: fc.string(),
+      txHash: txHashArb,
+    });
+
+    const responseLogArb = fc.record({
+      messageId: fc.bigInt({ min: 1n, max: 10000n }),
+      response: fc.string(),
+      txHash: txHashArb,
+    });
+
+    it("output is always sorted by messageId", () => {
+      fc.assert(
+        fc.property(
+          fc.array(messageLogArb, { minLength: 0, maxLength: 10 }),
+          fc.array(responseLogArb, { minLength: 0, maxLength: 10 }),
+          (messageLogs, responseLogs) => {
+            const result = buildMessagesFromEvents(messageLogs, responseLogs);
+
+            // Check that user messages appear in sorted order
+            let lastMessageId = 0n;
+            for (const msg of result) {
+              if (msg.role === "user") {
+                if (msg.messageId < lastMessageId) return false;
+                lastMessageId = msg.messageId;
+              }
+            }
+            return true;
+          }
+        )
+      );
+    });
+
+    it("every output message has valid txHash", () => {
+      fc.assert(
+        fc.property(
+          fc.array(messageLogArb, { minLength: 1, maxLength: 5 }),
+          fc.array(responseLogArb, { minLength: 0, maxLength: 5 }),
+          (messageLogs, responseLogs) => {
+            const result = buildMessagesFromEvents(messageLogs, responseLogs);
+            return result.every((msg) =>
+              msg.txHash.startsWith("0x") && msg.txHash.length === 66
+            );
+          }
+        )
+      );
+    });
+
+    it("user message count equals input message count", () => {
+      fc.assert(
+        fc.property(
+          fc.array(messageLogArb, { minLength: 0, maxLength: 10 }),
+          fc.array(responseLogArb, { minLength: 0, maxLength: 10 }),
+          (messageLogs, responseLogs) => {
+            const result = buildMessagesFromEvents(messageLogs, responseLogs);
+            const userMessages = result.filter((m) => m.role === "user");
+            return userMessages.length === messageLogs.length;
+          }
+        )
+      );
+    });
+
+    it("assistant messages only appear after matching user message", () => {
+      fc.assert(
+        fc.property(
+          fc.array(messageLogArb, { minLength: 1, maxLength: 5 }),
+          fc.array(responseLogArb, { minLength: 0, maxLength: 5 }),
+          (messageLogs, responseLogs) => {
+            const result = buildMessagesFromEvents(messageLogs, responseLogs);
+
+            for (let i = 0; i < result.length; i++) {
+              if (result[i].role === "assistant") {
+                // Must have a preceding user message with same messageId
+                const precedingUser = result.slice(0, i).find(
+                  (m) => m.role === "user" && m.messageId === result[i].messageId
+                );
+                if (!precedingUser) return false;
+              }
+            }
+            return true;
+          }
+        )
+      );
     });
   });
 });
