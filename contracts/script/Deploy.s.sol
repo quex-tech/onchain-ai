@@ -5,50 +5,38 @@ import "forge-std/Script.sol";
 import "../src/ChatOracle.sol";
 
 contract DeployScript is Script {
-    // Arbitrum Sepolia addresses
-    address constant ARB_SEPOLIA_QUEX_CORE = 0x97076a3c0A414E779f7BEC2Bd196D4FdaADFDB96;
-    address constant ARB_SEPOLIA_ORACLE_POOL = 0xE83bB2038F098E7aD40DC03298F4337609E6b0d5;
-    address constant ARB_SEPOLIA_TD_ADDRESS = 0x128B61f611EB624d35c9Af77aAF785432080C8Df;
-
-    // Arbitrum One (mainnet) addresses
-    address constant ARB_MAINNET_QUEX_CORE = 0x97076a3c0A414E779f7BEC2Bd196D4FdaADFDB96;
-    address constant ARB_MAINNET_ORACLE_POOL = 0xE83bB2038F098E7aD40DC03298F4337609E6b0d5;
-    address constant ARB_MAINNET_TD_ADDRESS = 0xB86EeAe9e3F0D3a91cE353CB0EfEaFF17CF16E6f;
-
-    // 0G Mainnet addresses
-    address constant ZG_MAINNET_QUEX_CORE = 0x48f15775Bc2d83BA18485FE19D4BC6a7ad90293c;
-    address constant ZG_MAINNET_ORACLE_POOL = 0xe0655573eCfE62a2e79ca99a4FB8d87a3e0B4822;
-    address constant ZG_MAINNET_TD_ADDRESS = 0xB86EeAe9e3F0D3a91cE353CB0EfEaFF17CF16E6f;
-
     function run() external {
         bytes memory encryptedApiKey = vm.envBytes("ENCRYPTED_API_KEY");
         uint256 chainId = block.chainid;
 
-        address quexCore;
-        address oraclePool;
-        address tdAddress;
+        // Read shared config from frontend directory
+        string memory root = vm.projectRoot();
+        string memory path = string.concat(root, "/../frontend/chains.json");
+        string memory json = vm.readFile(path);
 
+        // Get chain key based on chainId
+        string memory chainKey;
         if (chainId == 421614) {
-            // Arbitrum Sepolia
-            quexCore = ARB_SEPOLIA_QUEX_CORE;
-            oraclePool = ARB_SEPOLIA_ORACLE_POOL;
-            tdAddress = ARB_SEPOLIA_TD_ADDRESS;
+            chainKey = "arbitrumSepolia";
             console.log("Deploying to Arbitrum Sepolia...");
         } else if (chainId == 42161) {
-            // Arbitrum One (mainnet)
-            quexCore = ARB_MAINNET_QUEX_CORE;
-            oraclePool = ARB_MAINNET_ORACLE_POOL;
-            tdAddress = ARB_MAINNET_TD_ADDRESS;
+            chainKey = "arbitrum";
             console.log("Deploying to Arbitrum One...");
         } else if (chainId == 16661) {
-            // 0G Mainnet (Aristotle)
-            quexCore = ZG_MAINNET_QUEX_CORE;
-            oraclePool = ZG_MAINNET_ORACLE_POOL;
-            tdAddress = ZG_MAINNET_TD_ADDRESS;
+            chainKey = "zgMainnet";
             console.log("Deploying to 0G Mainnet...");
+        } else if (chainId == 16601) {
+            chainKey = "zgTestnet";
+            console.log("Deploying to 0G Testnet...");
         } else {
             revert("Unsupported chain");
         }
+
+        // Parse addresses from JSON
+        string memory prefix = string.concat(".chains.", chainKey);
+        address quexCore = vm.parseJsonAddress(json, string.concat(prefix, ".quexCore"));
+        address oraclePool = vm.parseJsonAddress(json, string.concat(prefix, ".oraclePool"));
+        address tdAddress = vm.parseJsonAddress(json, string.concat(prefix, ".tdAddress"));
 
         vm.startBroadcast();
 
@@ -61,5 +49,7 @@ contract DeployScript is Script {
         console.log("QuexCore:", quexCore);
         console.log("OraclePool:", oraclePool);
         console.log("TdAddress:", tdAddress);
+        console.log("");
+        console.log("Update chains.json with new chatOracle address!");
     }
 }

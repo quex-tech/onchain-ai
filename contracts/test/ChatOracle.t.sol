@@ -281,4 +281,159 @@ contract ChatOracleTest is Test {
 
         assertTrue(flowId1 != flowId2, "Each message should have its own flow");
     }
+
+    // === withdraw tests ===
+
+    function test_withdraw_requiresSubscription() public {
+        _initializeFlow();
+        vm.prank(user);
+        vm.expectRevert("No subscription");
+        oracle.withdraw();
+    }
+
+    function test_withdraw_callsDepositManager() public {
+        _initializeFlow();
+        vm.deal(user, 1 ether);
+
+        vm.prank(user);
+        oracle.sendMessage{value: 0.1 ether}("Hello", _buildBody("Hello"));
+
+        vm.mockCall(
+            quexCore,
+            abi.encodeWithSelector(IDepositManager.withdraw.selector),
+            abi.encode()
+        );
+
+        vm.prank(user);
+        oracle.withdraw();
+    }
+
+    function testFuzz_withdraw_anyUserWithSubscription(address randomUser) public {
+        vm.assume(randomUser != address(0) && randomUser != address(oracle));
+        _initializeFlow();
+        vm.deal(randomUser, 1 ether);
+
+        vm.prank(randomUser);
+        oracle.sendMessage{value: 0.1 ether}("Hello", _buildBody("Hello"));
+
+        vm.mockCall(
+            quexCore,
+            abi.encodeWithSelector(IDepositManager.withdraw.selector),
+            abi.encode()
+        );
+
+        vm.prank(randomUser);
+        oracle.withdraw();
+    }
+
+    // === getWithdrawableBalance tests ===
+
+    function test_getWithdrawableBalance_zeroWithNoSubscription() public view {
+        assertEq(oracle.getWithdrawableBalance(user), 0);
+    }
+
+    function test_getWithdrawableBalance_callsDepositManager() public {
+        _initializeFlow();
+        vm.deal(user, 1 ether);
+
+        vm.prank(user);
+        oracle.sendMessage{value: 0.1 ether}("Hello", _buildBody("Hello"));
+
+        vm.mockCall(
+            quexCore,
+            abi.encodeWithSelector(IDepositManager.withdrawableBalance.selector),
+            abi.encode(uint256(0.05 ether))
+        );
+
+        assertEq(oracle.getWithdrawableBalance(user), 0.05 ether);
+    }
+
+    function testFuzz_getWithdrawableBalance_anyAmount(uint256 balance) public {
+        vm.assume(balance < 1000 ether);
+        _initializeFlow();
+        vm.deal(user, 1 ether);
+
+        vm.prank(user);
+        oracle.sendMessage{value: 0.1 ether}("Hello", _buildBody("Hello"));
+
+        vm.mockCall(
+            quexCore,
+            abi.encodeWithSelector(IDepositManager.withdrawableBalance.selector),
+            abi.encode(balance)
+        );
+
+        assertEq(oracle.getWithdrawableBalance(user), balance);
+    }
+
+    // === Edge case tests ===
+
+    function test_sendMessage_emptyPromptStoresEmpty() public {
+        _initializeFlow();
+        vm.deal(user, 1 ether);
+
+        vm.prank(user);
+        oracle.sendMessage{value: 0.1 ether}("", _buildBody(""));
+
+        ChatOracle.Message[] memory messages = oracle.getConversation(user);
+        assertEq(messages[0].prompt, "");
+    }
+
+    function test_getConversation_emptyForNewUser() public view {
+        ChatOracle.Message[] memory messages = oracle.getConversation(user);
+        assertEq(messages.length, 0);
+    }
+
+    function test_getMessageCount_zeroForNewUser() public view {
+        assertEq(oracle.getMessageCount(user), 0);
+    }
+
+    function test_getUserSubscription_zeroForNewUser() public view {
+        assertEq(oracle.getUserSubscription(user), 0);
+    }
+
+    function test_getMessageFlowId_zeroForNonExistent() public view {
+        assertEq(oracle.getMessageFlowId(999), 0);
+    }
+
+    // === Fuzz tests for message content ===
+
+    function testFuzz_processResponse_storesAnyContent(string calldata content) public {
+        vm.assume(bytes(content).length > 0 && bytes(content).length < 1000);
+        _initializeFlow();
+        vm.deal(user, 1 ether);
+
+        vm.prank(user);
+        oracle.sendMessage{value: 0.1 ether}("Hello", _buildBody("Hello"));
+
+        DataItem memory response = DataItem({
+            timestamp: block.timestamp,
+            error: 0,
+            value: abi.encode(content)
+        });
+
+        vm.prank(quexCore);
+        oracle.processResponse(1, response, IdType.RequestId);
+
+        ChatOracle.Message[] memory messages = oracle.getConversation(user);
+        assertEq(messages[0].response, content);
+    }
+
+    // === Multiple message fuzz test ===
+
+    function testFuzz_sendMessage_multipleMessagesSequence(uint8 messageCount) public {
+        vm.assume(messageCount > 0 && messageCount <= 10);
+        _initializeFlow();
+        vm.deal(user, 10 ether);
+
+        vm.prank(user);
+        oracle.sendMessage{value: 0.1 ether}("First", _buildBody("First"));
+
+        for (uint8 i = 1; i < messageCount; i++) {
+            string memory prompt = string(abi.encodePacked("Message ", vm.toString(i)));
+            vm.prank(user);
+            oracle.sendMessage(prompt, _buildBody(prompt));
+        }
+
+        assertEq(oracle.getMessageCount(user), messageCount);
+    }
 }

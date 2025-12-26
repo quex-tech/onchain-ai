@@ -1,20 +1,30 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { defineChain } from "viem";
-import { arbitrum } from "viem/chains";
+import { arbitrum as viemArbitrum } from "viem/chains";
+import chainsConfig from "../chains.json";
+
+// Build chain definitions from shared config
+const arbitrumConfig = chainsConfig.chains.arbitrum;
+const zgMainnetConfig = chainsConfig.chains.zgMainnet;
+
+export const arbitrum = {
+  ...viemArbitrum,
+  rpcUrls: {
+    default: { http: [arbitrumConfig.rpcUrl] },
+  },
+};
 
 export const zgMainnet = defineChain({
-  id: 16661,
-  name: "0G Mainnet",
-  nativeCurrency: { name: "0G", symbol: "0G", decimals: 18 },
+  id: zgMainnetConfig.chainId,
+  name: zgMainnetConfig.name,
+  nativeCurrency: zgMainnetConfig.nativeCurrency,
   rpcUrls: {
-    default: { http: ["https://evmrpc.0g.ai"] },
+    default: { http: [zgMainnetConfig.rpcUrl] },
   },
   blockExplorers: {
-    default: { name: "0G Explorer", url: "https://chainscan.0g.ai" },
+    default: { name: "0G Explorer", url: zgMainnetConfig.explorerUrl },
   },
 });
-
-export { arbitrum };
 
 // Only show mainnets (hide testnets)
 export const CHAINS = [arbitrum, zgMainnet] as const;
@@ -26,26 +36,26 @@ export const config = getDefaultConfig({
   ssr: true,
 });
 
-// Contract addresses per chain - update after deployment
-export const CONTRACT_ADDRESSES: Record<number, `0x${string}`> = {
-  [arbitrum.id]: "0xb7941532b4E4355744F2CD14401cA2De9abA1C0C",
-  [zgMainnet.id]: "0xeC677913eFA4eDbB1033dFe5464eC35B21759c64",
-};
+// Build lookup tables from shared config
+type ChainConfig = typeof chainsConfig.chains.arbitrum;
+const allChains = chainsConfig.chains as Record<string, ChainConfig>;
+
+// Contract addresses per chain
+export const CONTRACT_ADDRESSES: Record<number, `0x${string}`> = Object.fromEntries(
+  Object.values(allChains).map((c) => [c.chainId, c.chatOracle as `0x${string}`])
+) as Record<number, `0x${string}`>;
 
 // Quex Core addresses per chain
-export const QUEX_CORE_ADDRESSES: Record<number, `0x${string}`> = {
-  [arbitrum.id]: "0x97076a3c0A414E779f7BEC2Bd196D4FdaADFDB96",
-  [zgMainnet.id]: "0x48f15775Bc2d83BA18485FE19D4BC6a7ad90293c",
-};
-
-// Default deposit amounts per chain
-export const DEFAULT_DEPOSIT: Record<number, string> = {
-  [arbitrum.id]: "0.001",
-  [zgMainnet.id]: "0.1",
-};
+export const QUEX_CORE_ADDRESSES: Record<number, `0x${string}`> = Object.fromEntries(
+  Object.values(allChains).map((c) => [c.chainId, c.quexCore as `0x${string}`])
+) as Record<number, `0x${string}`>;
 
 // Block explorer URLs per chain
-export const EXPLORER_URLS: Record<number, string> = {
-  [arbitrum.id]: "https://arbiscan.io",
-  [zgMainnet.id]: "https://chainscan.0g.ai",
-};
+export const EXPLORER_URLS: Record<number, string> = Object.fromEntries(
+  Object.values(allChains).map((c) => [c.chainId, c.explorerUrl])
+);
+
+// Default deposit amounts per chain
+export const DEFAULT_DEPOSIT: Record<number, string> = Object.fromEntries(
+  Object.values(allChains).map((c) => [c.chainId, c.defaultDeposit])
+);
