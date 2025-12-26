@@ -24,6 +24,7 @@ export const zgMainnet = defineChain({
   blockExplorers: {
     default: { name: "0G Explorer", url: zgMainnetConfig.explorerUrl },
   },
+  iconUrl: "/0g-logo.svg",
 });
 
 // Only show mainnets (hide testnets)

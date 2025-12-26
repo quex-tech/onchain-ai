@@ -16,7 +16,7 @@
     },
     "zgMainnet": {
       "chainId": 16661,
-      "name": "0G Mainnet",
+      "name": "Aristotle",
       "nativeCurrency": { "name": "0G", "symbol": "0G", "decimals": 18 },
       "rpcUrl": "https://evmrpc.0g.ai",
       "explorerUrl": "https://chainscan.0g.ai",
