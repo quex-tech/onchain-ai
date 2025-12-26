@@ -1,0 +1,54 @@
+{
+  "chains": {
+    "arbitrum": {
+      "chainId": 42161,
+      "name": "Arbitrum One",
+      "nativeCurrency": { "name": "ETH", "symbol": "ETH", "decimals": 18 },
+      "rpcUrl": "https://arb1.arbitrum.io/rpc",
+      "explorerUrl": "https://arbiscan.io",
+      "quexCore": "0x97076a3c0A414E779f7BEC2Bd196D4FdaADFDB96",
+      "oraclePool": "0xE83bB2038F098E7aD40DC03298F4337609E6b0d5",
+      "tdAddress": "0xB86EeAe9e3F0D3a91cE353CB0EfEaFF17CF16E6f",
+      "chatOracle": "0xb7941532b4E4355744F2CD14401cA2De9abA1C0C",
+      "defaultDeposit": "0.001"
+    },
+    "zgMainnet": {
+      "chainId": 16661,
+      "name": "0G Mainnet",
+      "nativeCurrency": { "name": "0G", "symbol": "0G", "decimals": 18 },
+      "rpcUrl": "https://evmrpc.0g.ai",
+      "explorerUrl": "https://chainscan.0g.ai",
+      "quexCore": "0x48f15775Bc2d83BA18485FE19D4BC6a7ad90293c",
+      "oraclePool": "0xe0655573eCfE62a2e79ca99a4FB8d87a3e0B4822",
+      "tdAddress": "0xB86EeAe9e3F0D3a91cE353CB0EfEaFF17CF16E6f",
+      "chatOracle": "0xeC677913eFA4eDbB1033dFe5464eC35B21759c64",
+      "defaultDeposit": "0.1"
+    },
+    "arbitrumSepolia": {
+      "chainId": 421614,
+      "name": "Arbitrum Sepolia",
+      "nativeCurrency": { "name": "ETH", "symbol": "ETH", "decimals": 18 },
+      "rpcUrl": "https://sepolia-rollup.arbitrum.io/rpc",
+      "explorerUrl": "https://sepolia.arbiscan.io",
+      "quexCore": "0x97076a3c0A414E779f7BEC2Bd196D4FdaADFDB96",
+      "oraclePool": "0xE83bB2038F098E7aD40DC03298F4337609E6b0d5",
+      "tdAddress": "0x128B61f611EB624d35c9Af77aAF785432080C8Df",
+      "chatOracle": "0x6Fe4C7A89dd06295Cf5cdd33b92c33451d408427",
+      "defaultDeposit": "0.01",
+      "testnet": true
+    },
+    "zgTestnet": {
+      "chainId": 16601,
+      "name": "0G Newton Testnet",
+      "nativeCurrency": { "name": "0G", "symbol": "0G", "decimals": 18 },
+      "rpcUrl": "https://evmrpc-testnet.0g.ai",
+      "explorerUrl": "https://chainscan-newton.0g.ai",
+      "quexCore": "0x0000000000000000000000000000000000000000",
+      "oraclePool": "0x0000000000000000000000000000000000000000",
+      "tdAddress": "0x0000000000000000000000000000000000000000",
+      "chatOracle": "0x0000000000000000000000000000000000000000",
+      "defaultDeposit": "0.1",
+      "testnet": true
+    }
+  }
+}

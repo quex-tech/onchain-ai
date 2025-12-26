@@ -2,6 +2,11 @@ import { describe, it, expect } from "vitest";
 import { getExplorerUrl } from "./utils";
 
 describe("getExplorerUrl", () => {
+  it("returns Arbitrum One URL for chain 42161", () => {
+    const url = getExplorerUrl(42161, "0xabc123");
+    expect(url).toBe("https://arbiscan.io/tx/0xabc123");
+  });
+
   it("returns Arbitrum Sepolia URL for chain 421614", () => {
     const url = getExplorerUrl(421614, "0xabc123");
     expect(url).toBe("https://sepolia.arbiscan.io/tx/0xabc123");
@@ -17,8 +22,8 @@ describe("getExplorerUrl", () => {
     expect(url).toBe("https://chainscan-newton.0g.ai/tx/0x789ghi");
   });
 
-  it("defaults to Arbitrum Sepolia for unknown chains", () => {
+  it("defaults to Arbitrum One for unknown chains", () => {
     const url = getExplorerUrl(99999, "0xunknown");
-    expect(url).toBe("https://sepolia.arbiscan.io/tx/0xunknown");
+    expect(url).toBe("https://arbiscan.io/tx/0xunknown");
   });
 });
