@@ -43,3 +43,9 @@ export const DEFAULT_DEPOSIT: Record<number, string> = {
   [arbitrum.id]: "0.001",
   [zgMainnet.id]: "0.1",
 };
+
+// Block explorer URLs per chain
+export const EXPLORER_URLS: Record<number, string> = {
+  [arbitrum.id]: "https://arbiscan.io",
+  [zgMainnet.id]: "https://chainscan.0g.ai",
+};
