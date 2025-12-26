@@ -168,6 +168,8 @@ export default function Home() {
 
   const { isLoading: isConfirming, isSuccess: isConfirmed, error: txError } = useWaitForTransactionReceipt({
     hash: pendingMessage?.txHash,
+    confirmations: 1,
+    pollingInterval: 1_000, // Poll every 1 second for faster feedback
   });
 
   const hasSubscription = hasActiveSubscription(subscriptionId);
