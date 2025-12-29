@@ -5,7 +5,7 @@
 
 A ChatGPT-like interface for [Quex](https://quex.tech) oracle to get on-chain verifiable responses from ChatGPT.
 
-**Live Demo:** https://quex-tech.github.io/onchain-ai/
+**Live Demo:** https://ongpt.quex.tech/
 
 ## Quick Start
 

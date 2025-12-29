@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import Image from "next/image";
-import { basePath } from "@/lib/config";
 
 export interface HeaderProps {
   hasSubscription: boolean;
@@ -29,7 +28,7 @@ export function Header({
     <header className="px-6 py-4 border-b border-[#2a2a3e] bg-black flex justify-between items-center">
       <div className="flex items-center gap-4">
         <Image
-          src={`${basePath}/quex-logo.png`}
+          src="/quex-logo.png"
           alt="Quex"
           width={100}
           height={26}
